@@ -7,7 +7,7 @@ const $=sel=>document.querySelector(sel);
 let share=null,busy=false,notice='',status='idle',syncTimer=0,lastFingerprint='',showInviteInfo=false;
 try{const v=JSON.parse(localStorage.getItem(STORAGE));if(v&&/^[A-Za-z0-9_-]{24,64}$/.test(v.id)&&/^[a-f0-9]{64}$/.test(v.manageToken))share=v;}catch{}
 const source=()=>db.items.filter(x=>x&&x.kind==='event'&&x.dueAt&&x.title);
-const link=()=>share?location.origin+'/calendar/'+encodeURIComponent(share.id)+'.ics':'';
+const link=()=>share?location.origin+'/.netlify/functions/calendar-share?id='+encodeURIComponent(share.id):'';
 const utc=d=>new Date(d).toISOString();
 const dateEnd=(start,min)=>new Date(start.getTime()+Math.max(15,Math.min(10080,Number(min)||60))*60000);
 function collect(){
@@ -19,7 +19,7 @@ function collect(){
   const frequency=String(item.repeat||'none');
   const add=d=>{
    if(d<begin||d>until||out.length>=750)return;
-   out.push({uid:('item_'+item.id+'_'+d.getFullYear()+'_'+(d.getMonth()+1)+'_'+d.getDate()).replace(/[^A-Za-z0-9:_-]/g,'').slice(0,130),
+   out.push({uid:('item_'+item.id+(frequency==='none'?'':'_'+d.getFullYear()+'_'+(d.getMonth()+1)+'_'+d.getDate())).replace(/[^A-Za-z0-9:_-]/g,'').slice(0,130),
     start:utc(d),end:utc(dateEnd(d,item.duration)),title:String(item.title).slice(0,140),location:String(item.location||'').slice(0,140)});
   };
   if(frequency==='none'){add(start);continue;}
@@ -44,6 +44,7 @@ function collect(){
  }
  return out.sort((a,b)=>a.start.localeCompare(b.start)).slice(0,750);
 }
+function published(events,names,locations){return events.map(e=>({...e,title:names?e.title:'Busy',location:names&&locations?e.location:''}));}
 function fingerprint(events){
  // This is only a local change detector. Private schedule details are not placed in logs.
  return JSON.stringify([events,share?.shareNames,share?.shareLocations]);
@@ -81,6 +82,9 @@ function panel(){
   '<div class="calendar-share-instructions"><strong>iPhone / Apple Calendar</strong><p>Calendar → Calendars → Add Calendar → Add Subscription Calendar → paste the link.</p>'+
   '<strong>Google Calendar</strong><p>On a computer: Google Calendar → Other calendars → + → From URL → paste the link. It then appears on the subscriber’s devices.</p>'+
   '<p class="fine">Subscriptions are read-only and each calendar provider decides when to refresh. Changes to LifeOS events are published while this device is online and the app syncs; there is no live cloud account sync.</p></div></details>'+
+  '<div class="calendar-share-tools"><button type="button" class="outline-btn" data-life-cal="import">Import .ics events</button>'+
+  (shared?'<button type="button" class="outline-btn" data-life-cal="download">Download .ics</button>':'')+'</div>'+
+  '<input id="lifeCalendarFile" type="file" accept=".ics,text/calendar" hidden>'+
   (notice?'<p class="calendar-share-message" role="status">'+safe(notice)+'</p>':'')+'</section>';
 }
 const baseCalendar=calendarPage;
@@ -96,7 +100,7 @@ async function create(){
  if(!confirm('Create a read-only calendar link? Anyone who receives the link can view '+(showNames?'your event titles'+(showLocations?' and locations':''):'when you are busy')+'. You can disable it later.'))return;
  busy=true;notice='Creating your calendar link…';redraw();
  try{
-  const events=collect(),data=await request('create',{events,shareNames:showNames,shareLocations:showLocations});
+  const events=published(collect(),showNames,showLocations),data=await request('create',{events,shareNames:showNames,shareLocations:showLocations});
   saveShare({id:data.id,manageToken:data.manageToken,shareNames:showNames,shareLocations:showLocations,updatedAt:data.updatedAt});
   lastFingerprint=fingerprint(events);
   notice='Your read-only link is ready to copy and share.';
@@ -105,7 +109,7 @@ async function create(){
 }
 async function sync(silent=true){
  if(!share||busy||!navigator.onLine)return;
- const events=collect(),current=fingerprint(events);if(silent&&current===lastFingerprint)return;
+ const events=published(collect(),share.shareNames,share.shareLocations),current=fingerprint(events);if(silent&&current===lastFingerprint)return;
  busy=true;
  try{
   const result=await request('sync',{events,shareNames:share.shareNames,shareLocations:share.shareLocations});
@@ -134,7 +138,7 @@ async function copy(){
  if(!share)return;
  try{await navigator.clipboard.writeText(link());notice='Calendar link copied. Send it to the person you want to connect.';}
  catch{
-  const input=$('#shareLinkField');if(input){input.select();notice='Copy the selected link and share it.';}
+  const input=$('#shareLinkField');if(input){input.focus();input.select();notice='The link is selected. Use Copy from the selection menu.';return;}
   else notice='Your link is ready. Use Share link to send it.';
  }
  redraw();
@@ -172,6 +176,35 @@ document.addEventListener('click',async e=>{
  else if(action==='copy')await copy();
  else if(action==='share')await shareNow();
  else if(action==='download')snapshotICS();
+ else if(action==='import')$('#lifeCalendarFile')?.click();
+});
+async function importCalendarFile(file){
+ if(!file)return;
+ if(file.size>1_250_000){notice='Calendar file is too large (maximum 1.25 MB).';redraw();return;}
+ try{
+  const {parseICS}=await import('/calendar-core.mjs');
+  const imported=parseICS(await file.text());
+  const keys=new Set(db.items.filter(x=>x.externalUID).map(x=>x.externalUID));
+  const existing=new Set(db.items.filter(x=>x.kind==='event').map(x=>String(x.title).toLowerCase()+'|'+x.dueAt));
+  const news=imported.filter(e=>{
+   if(e.externalUID&&keys.has(e.externalUID))return false;
+   const key=e.title.toLowerCase()+'|'+e.dueAt;
+   if(existing.has(key))return false;
+   existing.add(key);if(e.externalUID)keys.add(e.externalUID);return true;
+  });
+  if(!news.length){notice='No new calendar events found in that file.';redraw();return;}
+  if(!confirm('Import '+news.length+' event'+(news.length!==1?'s':'')+' into LifeOS?'+(share?' Your active sharing link will include the new events at its selected privacy level.':'')))return;
+  const importedItems=news.map(e=>({...e,id:uid(),kind:'event',priority:'Normal',alert:false,leadMinutes:0,done:false,
+   createdAt:Date.now(),updatedAt:Date.now()}));
+  db.items.unshift(...importedItems);save();
+  notice='Imported '+news.length+' event'+(news.length!==1?'s':'')+'. Imports do not create automatic reminders.';
+  redraw();
+ }catch(error){notice='Calendar import failed: '+String(error.message||error);redraw();}
+}
+document.addEventListener('change',async e=>{
+ if(e.target.id==='lifeCalendarFile'){
+  const file=e.target.files?.[0];await importCalendarFile(file);return;
+ }
 });
 document.addEventListener('change',e=>{
  if(e.target.id==='shareNames'){
