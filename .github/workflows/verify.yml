@@ -1,0 +1,22 @@
+name: Verify LifeOS
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate JavaScript syntax
+        run: |
+          node --check app.js
+          node --check sw.js
+          node --check netlify/lib/core.mjs
+          node --check netlify/functions/push.mjs
+          node --check netlify/functions/check-reminders.mjs
+      - name: Check push scheduling logic
+        run: node --test tests/*.test.mjs
