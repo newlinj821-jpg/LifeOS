@@ -394,7 +394,7 @@ $('#bellButton').onclick=()=>setPage('reminders');
 $('#avatarButton').onclick=()=>setPage('settings');
 document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();searchAll();}if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='n'){e.preventDefault();quickAdd();}});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkForeground();});
-window.addEventListener('hashchange',()=>{const page=location.hash.slice(1);if(META[page])setPage(page);});
+window.addEventListener('hashchange',()=>{const raw=location.hash.slice(1),page=raw.split('?')[0],focus=new URLSearchParams(raw.split('?')[1]||'').get('focus');if(META[page])setPage(page);if(focus){const it=db.items.find(x=>x.id===focus);if(it)openEntry(it.kind,it.id);}});
 if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(console.warn));}
-currentPage=META[location.hash.slice(1)]?location.hash.slice(1):'today';
-render();loadConfig().then(checkPushStatus);checkForeground();setInterval(checkForeground,30000);
+currentPage=META[location.hash.slice(1).split('?')[0]]?location.hash.slice(1).split('?')[0]:'today';
+render();loadConfig().then(checkPushStatus);checkForeground();setInterval(checkForeground,30000);const initialFocus=new URLSearchParams(location.hash.split('?')[1]||'').get('focus');if(initialFocus){const focusItem=db.items.find(x=>x.id===initialFocus);if(focusItem)setTimeout(()=>openEntry(focusItem.kind,focusItem.id),150);}
