@@ -23,8 +23,8 @@
 
 # Read-only, revocable calendar subscription URL for Apple Calendar and Google Calendar.
 [[redirects]]
-  from = "/calendar/:id.ics"
-  to = "/.netlify/functions/calendar-share?id=:id"
+  from = "/calendar/:file"
+  to = "/.netlify/functions/calendar-share?id=:file"
   status = 200
   force = true
 
