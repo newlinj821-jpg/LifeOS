@@ -3,7 +3,7 @@
 import {getStore} from '@netlify/blobs';
 import webpush from 'web-push';
 import {readVault,writeVault,currentEnvironment} from './bank-security.mjs';
-import {normalizeAccount,normalizeTransaction,applyTransactions,isDeposit,isExpense,
+import {normalizeAccount,normalizeTransaction,applyTransactions,mergeBankAccounts,isDeposit,isExpense,
  bankPrefs,bankAlertCandidates} from './bank-data.mjs';
 import {digest,configured,quiet,clock} from './core.mjs';
 
@@ -62,9 +62,11 @@ export async function updateBanks({itemId=null,includeAccounts=true}={}){
    const oldAccounts=item.accounts||[];
    if(includeAccounts){
     const data=await plaidBank('accounts/get',{access_token:item.accessToken},16000);
+    const fresh=(data.accounts||[]).map(a=>normalizeAccount(a,item.itemId)).filter(Boolean);
     item.previousAccounts=oldAccounts;
-    item.accounts=(data.accounts||[]).map(a=>normalizeAccount(a,item.itemId)).filter(Boolean);
-    item.updatedAt=Date.now();
+    item.accounts=mergeBankAccounts(oldAccounts,fresh);
+    if(fresh.length)item.updatedAt=Date.now();
+    else item.warning='ACCOUNTS_PENDING';
    }
    const synced=await incremental(item);
    item.transactions=synced.tx;item.cursor=synced.cursor;
