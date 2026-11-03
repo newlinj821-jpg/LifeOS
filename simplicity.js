@@ -274,8 +274,8 @@
   $('#newButton').onclick=openQuickPicker;
   $('#mobileAdd').onclick=openQuickPicker;
   document.addEventListener('click',event=>{
-    const target=event.target.closest('[data-life-mini],[data-life-water],[data-life-close],[data-life-expand],[data-life-more-types],[data-life-mode],[data-life-focus],[data-life-setup],[data-life-onboard-mode],[data-life-onboard-focus],[data-life-skip],[data-life-finish],[data-life-template],[data-life-custom-rules],[data-life-template-back]');
-    if(!target)return;
+    const target=event.target.closest('[data-life-mini],[data-life-water],[data-life-close],[data-life-expand],[data-life-more-types],button[data-life-mode],[data-life-focus],[data-life-setup],[data-life-onboard-mode],[data-life-onboard-focus],[data-life-skip],[data-life-finish],[data-life-template],[data-life-custom-rules],[data-life-template-back]');
+    if(!target||target===document.body||target===document.documentElement)return;
     if(target.hasAttribute('data-life-mini')){openMini(target.dataset.lifeMini);return;}
     if(target.hasAttribute('data-life-water')){const key=dayKey(new Date());db.water[key]=(db.water[key]||0)+1;save();toast('Water serving logged.');return;}
     if(target.hasAttribute('data-life-close')){$('#'+(target.dataset.lifeClose==='quick'?'quickDialog':'lifeMiniDialog'))?.close();return;}
