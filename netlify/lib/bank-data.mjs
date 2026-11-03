@@ -1,6 +1,6 @@
 /* LifeOS bank references: normalize public API output without storing credentials. */
 export const roundMoney=n=>Math.round((Number(n)+Number.EPSILON)*100)/100;
-export const safeAmount=n=>Number.isFinite(Number(n))?roundMoney(n):null;
+export const safeAmount=n=>(n==null||n===''||typeof n==='boolean'||!Number.isFinite(Number(n)))?null:roundMoney(n);
 export const safeLabel=(v,max=120)=>String(v??'').replace(/[<>\x00-\x1f]/g,' ').trim().slice(0,max);
 export function normalizeAccount(x,itemId){
  if(!x||typeof x.account_id!=='string')return null;
@@ -9,6 +9,19 @@ export function normalizeAccount(x,itemId){
   name:safeLabel(x.name,75),mask:safeLabel(x.mask,6),
   current:safeAmount(b.current),available:safeAmount(b.available),
   currency:safeLabel(b.iso_currency_code||'USD',5)};
+}
+export function mergeBankAccounts(previous,fresh,updatedAt=Date.now()){
+ const old=Array.isArray(previous)?previous:[];
+ const next=Array.isArray(fresh)?fresh.filter(x=>x?.id):[];
+ if(!next.length)return old.map(a=>({...a,stale:true}));
+ const byId=new Map(old.map(a=>[a.id,a]));
+ return next.map(a=>{
+  const prev=byId.get(a.id);
+  const current=Number.isFinite(a.current)?a.current:Number.isFinite(prev?.current)?prev.current:null;
+  const available=Number.isFinite(a.available)?a.available:Number.isFinite(prev?.available)?prev.available:null;
+  const retained=(a.current===null&&Number.isFinite(prev?.current))||(a.available===null&&Number.isFinite(prev?.available));
+  return {...a,current,available,lastReportedAt:retained?(prev?.lastReportedAt||null):updatedAt,stale:Boolean(retained)};
+ });
 }
 export function normalizeTransaction(x,itemId){
  if(!x||typeof x.transaction_id!=='string'||!x.account_id)return null;
