@@ -176,7 +176,7 @@
   function openMini(kind,initial={}){
     if(!KIND[kind])return;
     if($('#quickDialog').open)$('#quickDialog').close();
-    const itemLabel=KIND[kind].label,forLog=logged.has(kind),when=initial.dueAt??(forLog?localDateTime(new Date()):kind==='reminder'?nextReminderTime():'');
+    const itemLabel=KIND[kind].label,forLog=logged.has(kind),when=initial.dueAt??(forLog||['task','habit','chore','pet'].includes(kind)?localDateTime(new Date()):kind==='reminder'?nextReminderTime():'');
     const repeat=initial.repeat||'none';
     const showRepeat=['reminder','task','habit','pet','bill','chore','workout','meal'].includes(kind);
     const defaultAlert=kind==='reminder'||kind==='event';
@@ -200,7 +200,7 @@
       const item={
         id:uid(),kind,title,dueAt:dueAt||'',repeat:$('#lifeMiniRepeat')?.value||'none',
         notes:initial.notes||'',details:'',alert,leadMinutes:0,priority:'Normal',
-        done:forLog,createdAt:Date.now(),updatedAt:Date.now()
+        done:forLog&&!alert&&(!dueAt||new Date(dueAt)<=new Date()),createdAt:Date.now(),updatedAt:Date.now()
       };
       db.items.push(item);dlg.close();save();if(alert||pushEnabled)syncReminder(item);
       toast((forLog?'Logged ':'Saved ')+title+(alert?'. Notification scheduled if push is enabled.':'.'));
@@ -263,6 +263,9 @@
     if(target.hasAttribute('data-life-finish')){closeOnboarding(false);return;}
   });
   document.addEventListener('click',event=>{
+    if(event.target.closest('#quickDialog [data-nav="capture"]'))$('#quickDialog')?.close();
+  });
+  document.addEventListener('click',event=>{
     const full=event.target.closest('[data-life-open-full]');
     if(!full)return;$('#quickDialog').close();openEntry(full.dataset.lifeOpenFull);
   });
@@ -280,6 +283,7 @@
       input.checked?chosen.add(k):chosen.delete(k);onboardingFocus=[...chosen];return;
     }
   });
+  if(location.hash.slice(1)==='explore')currentPage='explore';
   render();
   if(logic.shouldShowOnboarding(db.settings,db.items.length)){
     requestAnimationFrame(()=>openOnboarding());
