@@ -37,7 +37,7 @@ const KIND={
 };
 const SECTION_KINDS={planner:['task'],calendar:['event'],routines:['habit'],fitness:['workout'],food:['meal'],money:['bill'],home:['chore'],pets:['pet'],wellness:['checkin'],projects:['project'],goals:['goal'],vault:['note'],journal:['journal'],reminders:['reminder']};
 const $=sel=>document.querySelector(sel);
-let currentPage='today', filter='all', keyword='', selectedDay=dayKey(new Date()), calendarCursor=new Date(), config={}, pushEnabled=false, pushIssue='', toastHandle=0, pendingSync=false;
+let currentPage='today', filter='all', keyword='', selectedDay=dayKey(new Date()), calendarCursor=new Date(), config={}, pushEnabled=false, pushIssue='', pushRecoveryPending=localStorage.getItem('lifeos.pushRecoveryPending')==='1', toastHandle=0, pendingSync=false;
 const defaults=()=>({version:1,items:[],water:{},settings:{name:'',theme:'dark',budget:0,lowEnergy:false,hidden:[],dailyWater:8,privatePush:false,quietEnabled:false,quietStart:'22:00',quietEnd:'07:00'},fired:{},createdAt:Date.now()});
 function load(){try{const obj=JSON.parse(localStorage.getItem(STORE));if(obj&&Array.isArray(obj.items))return {...defaults(),...obj,settings:{...defaults().settings,...obj.settings}};}catch(e){}return defaults();}
 let db=load();
@@ -172,12 +172,13 @@ function insightsPage(){
 function settingsPage(){
  const s=db.settings,modules=Object.entries(META).filter(([k])=>!['today','settings'].includes(k));
  const configured=!!(config.configured&&config.publicKey);
- const status=pushIssue||(pushEnabled?'This phone is registered. Send a test to verify that notifications are delivered.':!configured?'The notification service is not configured in Netlify yet.':'Notifications are not connected to this phone. Enable them from the installed LifeOS app.');
+ const status=pushIssue||(pushEnabled?'This phone is registered. Send a test to verify delivery.':pushRecoveryPending?'Enter the six-digit code from the notification to reconnect this phone.':!configured?'The notification service is not configured in Netlify yet.':'Notifications are not connected to this phone. Enable them from the installed LifeOS app.');
+ const recoveryMarkup=pushRecoveryPending&&!pushEnabled?'<div class="push-recovery-form" role="group" aria-label="Verify this phone"><label for="pushRecoveryCode"><strong>Enter your verification code</strong><small>Check this phone’s notification center. The code is valid for 10 minutes.</small></label><div class="push-recovery-entry"><input id="pushRecoveryCode" class="field" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="6-digit code" aria-label="Six digit verification code"><button type="button" class="primary-btn" data-push-verify>Verify phone</button></div><p class="fine">No notification? Open Connection options and request another code after one minute.</p></div>':'';
  const moduleLines=modules.map(([k,v])=>'<label class="toggle-line"><div><strong>'+v.icon+' '+v.label+'</strong><p>'+safe(v.desc)+'</p></div><input class="toggle" type="checkbox" data-module="'+k+'" '+(!s.hidden.includes(k)?'checked':'')+'></label>').join('');
  return header('Settings','Your personal preferences, privacy controls and notification delivery.')+
  '<div class="settings-grid"><section class="panel panel-pad"><h2>Personalize LifeOS</h2><p class="fine" style="margin:7px 0 14px">Choose a display name, preferred color theme and personal targets.</p><div class="modal-grid"><div class="form-group"><label for="settingName">Display name</label><input id="settingName" class="field" maxlength="45" value="'+safe(s.name)+'" placeholder="Your name"></div><div class="form-group"><label for="settingTheme">Appearance</label><select id="settingTheme" class="field"><option value="dark" '+(s.theme==='dark'?'selected':'')+'>Midnight dark</option><option value="light" '+(s.theme==='light'?'selected':'')+'>Daylight light</option></select></div><div class="form-group"><label for="settingBudget">Monthly budget ($)</label><input id="settingBudget" class="field" type="number" min="0" step=".01" value="'+(s.budget||0)+'"></div><div class="form-group"><label for="settingWater">Water target (servings)</label><input id="settingWater" class="field" type="number" min="1" max="30" value="'+(s.dailyWater||8)+'"></div></div><div class="button-row">'+btn('Save preferences','save-settings')+'</div><div class="hr"></div><label class="toggle-line"><div><strong>Low-energy mode</strong><p>Offer a smaller, more forgiving daily focus.</p></div><input type="checkbox" class="toggle" data-setting="lowEnergy" '+(s.lowEnergy?'checked':'')+'></label></section>'+
  '<section class="panel panel-pad" id="notificationSettings"><h2>Notifications</h2><p class="fine" style="margin:7px 0 12px">Send reminders to this device while LifeOS is closed. Alerts are checked approximately every five minutes.</p><div class="status '+(pushIssue?'warn':pushEnabled?'good':configured?'':'warn')+'">'+safe(status)+'</div><div class="detail-lines" style="margin:15px 0"><div><strong>Notification server:</strong> '+(configured?'Configured':'Needs configuration')+'</div><div><strong>This device:</strong> '+(pushEnabled?'Verified':'Not connected')+'</div><div><strong>Browser permission:</strong> '+safe('Notification' in window?Notification.permission:'Unsupported')+'</div><div><strong>Timezone:</strong> '+safe(Intl.DateTimeFormat().resolvedOptions().timeZone)+'</div></div>'+
- '<div class="button-row">'+btn(pushEnabled?'Refresh connection':'Enable notifications','enable-push','primary-btn')+btn('Send a test','test-notification')+'</div><details class="push-advanced" '+(pushIssue?'open':'')+'><summary>Connection options</summary><div class="button-row">'+btn('Reconnect this device','repair-push')+btn('Sync schedules','sync-all')+(pushEnabled?btn('Disable notifications','disable-push','danger-btn'):'')+'</div></details><div class="hr"></div><h3>Notification preferences</h3><label class="toggle-line"><div><strong>Quiet hours</strong><p>Silence normal-priority alerts during your selected hours. Urgent alerts still come through. Suppressed alerts are not automatically replayed.</p></div><input type="checkbox" class="toggle" data-setting="quietEnabled" '+(s.quietEnabled?'checked':'')+'></label><div class="modal-grid" style="margin-top:12px"><div class="form-group"><label for="quietStart">Quiet from</label><input id="quietStart" type="time" class="field" value="'+safe(s.quietStart||'22:00')+'"></div><div class="form-group"><label for="quietEnd">Quiet until</label><input id="quietEnd" type="time" class="field" value="'+safe(s.quietEnd||'07:00')+'"></div></div><label class="toggle-line"><div><strong>Private lock-screen content</strong><p>Hide reminder titles and personal details from the notification preview; show only the category.</p></div><input type="checkbox" class="toggle" data-setting="privatePush" '+(s.privatePush?'checked':'')+'></label><div class="button-row">'+btn('Save notification preferences','save-notification-settings','primary-btn')+'</div><div class="hr"></div><p class="fine"><strong>On iPhone:</strong> Open your deployed LifeOS site in Safari → Share → Add to Home Screen → open the installed LifeOS icon → tap Enable background push. An ordinary Safari tab cannot receive iPhone Web Push.</p><p class="fine" style="margin-top:10px">Only opted-in reminder titles, schedules, brief notes, timezone and push subscription data are stored on the notification service. Your journal, notes, financial records and other LifeOS data stay local unless you include them in reminder details.</p></section>'+
+ '<div class="button-row">'+btn(pushEnabled?'Refresh connection':pushRecoveryPending?'Send new code':'Enable notifications','enable-push','primary-btn')+(pushEnabled?btn('Send a test','test-notification'):'')+'</div>'+recoveryMarkup+'<details class="push-advanced" '+(pushIssue?'open':'')+'><summary>Connection options</summary><div class="button-row">'+btn('Reconnect this device','repair-push')+btn('Sync schedules','sync-all')+(pushEnabled?btn('Disable notifications','disable-push','danger-btn'):'')+'</div></details><div class="hr"></div><h3>Notification preferences</h3><label class="toggle-line"><div><strong>Quiet hours</strong><p>Silence normal-priority alerts during your selected hours. Urgent alerts still come through. Suppressed alerts are not automatically replayed.</p></div><input type="checkbox" class="toggle" data-setting="quietEnabled" '+(s.quietEnabled?'checked':'')+'></label><div class="modal-grid" style="margin-top:12px"><div class="form-group"><label for="quietStart">Quiet from</label><input id="quietStart" type="time" class="field" value="'+safe(s.quietStart||'22:00')+'"></div><div class="form-group"><label for="quietEnd">Quiet until</label><input id="quietEnd" type="time" class="field" value="'+safe(s.quietEnd||'07:00')+'"></div></div><label class="toggle-line"><div><strong>Private lock-screen content</strong><p>Hide reminder titles and personal details from the notification preview; show only the category.</p></div><input type="checkbox" class="toggle" data-setting="privatePush" '+(s.privatePush?'checked':'')+'></label><div class="button-row">'+btn('Save notification preferences','save-notification-settings','primary-btn')+'</div><div class="hr"></div><p class="fine"><strong>On iPhone:</strong> Open your deployed LifeOS site in Safari → Share → Add to Home Screen → open the installed LifeOS icon → tap Enable background push. An ordinary Safari tab cannot receive iPhone Web Push.</p><p class="fine" style="margin-top:10px">Only opted-in reminder titles, schedules, brief notes, timezone and push subscription data are stored on the notification service. Your journal, notes, financial records and other LifeOS data stay local unless you include them in reminder details.</p></section>'+
  '<section class="panel panel-pad"><h2>Show or hide modules</h2><p class="fine" style="margin:7px 0 14px">Customize navigation. Hidden sections retain their entries.</p>'+moduleLines+'</section>'+
  '<section class="panel panel-pad"><h2>Your data & backups</h2><p class="fine" style="margin:7px 0 14px">Personal records are stored in this browser. Keep backups before changing phones, clearing browsing data, or resetting a device. Exported files may contain private information.</p><div class="button-row">'+btn('Export complete backup','export-data','primary-btn')+'<label class="outline-btn" style="display:inline-block;cursor:pointer">Import backup<input type="file" id="importFile" accept=".json,application/json" style="display:none"></label></div><div class="hr"></div><div class="danger-zone"><h3>Clear local data</h3><p class="fine" style="margin:5px 0 12px">Removing browser data cannot revoke a push subscription already saved on the server. Disable push first to stop its reminders.</p>'+btn('Erase local data','clear-data','danger-btn')+'</div></section></div>';
 }
@@ -232,6 +233,7 @@ function action(name){
  if(name==='clear-data'){if(!confirm('Erase all local LifeOS records on this device? Export a backup first. This cannot be undone.'))return;db=defaults();save();toast('Local records cleared.');return;}
  if(name==='enable-push'){if(pushEnabled)syncAllReminders();else enablePush();return;}
  if(name==='repair-push'){repairPush();return;}
+ if(name==='verify-push'){verifyPushRecovery();return;}
  if(name==='disable-push'){disablePush();return;}
  if(name==='test-notification'){sendTestNotification();return;}
  if(name==='sync-all'){syncAllReminders();return;}
@@ -313,43 +315,80 @@ function pushAuthFailure(error){
  pushEnabled=false;pushIssue='This phone needs to reconnect notifications. Open Connection options and choose Reconnect this device.';render();return true;
 }
 function pushPayload(action,sub){return {action,subscription:sub.toJSON(),manageToken:getManageToken(),reminders:pushItems(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,quiet:{enabled:!!db.settings.quietEnabled,start:db.settings.quietStart||'22:00',end:db.settings.quietEnd||'07:00'},privateMode:!!db.settings.privatePush};}
+async function startPushRecovery(subscription){
+ const response=await pushRequest(pushPayload('recover-start',subscription));
+ if(response.alreadyRegistered){await checkPushStatus();return;}
+ pushRecoveryPending=true;localStorage.setItem('lifeos.pushRecoveryPending','1');
+ pushEnabled=false;
+ pushIssue='A six-digit code was sent to this phone. Find it in your notifications and enter it below to verify this device.';
+ render();toast('Verification sent to this phone. Enter the six-digit code below.');
+}
+async function verifyPushRecovery(){
+ const code=String($('#pushRecoveryCode')?.value||'').replace(/\s/g,'');
+ if(!/^\d{6}$/.test(code)){toast('Enter the six-digit code from your LifeOS notification.');return;}
+ try{
+  const sub=await getPushSub();if(!sub)throw Error('No phone subscription found. Choose Enable notifications.');
+  const response=await pushRequest({...pushPayload('recover-finish',sub),code});
+  if(!response.manageToken)throw Error('Verification succeeded but no device token was returned.');
+  localStorage.setItem('lifeos.pushToken',response.manageToken);
+  pushEnabled=true;pushRecoveryPending=false;pushIssue='';
+  localStorage.removeItem('lifeos.pushRecoveryPending');render();
+  toast('This phone is verified. '+response.reminderCount+' reminder schedules synced. Send a test to confirm delivery.');
+ }catch(error){
+  pushIssue=error.code==='CODE_EXPIRED'?'Your verification code expired. Request a new one.':
+   error.code==='TOO_MANY_ATTEMPTS'?'Too many incorrect attempts. Request a fresh code.':
+   error.code==='INVALID_CODE'?'That code was not accepted. Check the notification and try again.':
+   'Could not verify: '+String(error.message||error);
+  render();toast(pushIssue);
+ }
+}
 async function enablePush(){
  try{
   if(!config.configured||!config.publicKey)throw Error('Notifications are not configured on the server. Check Netlify settings.');
   if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window))throw Error('Web Push requires a supported browser. On iPhone, install LifeOS to the Home Screen first.');
   if(/iPhone|iPad|iPod/.test(navigator.userAgent)&&!window.matchMedia('(display-mode: standalone)').matches&&!navigator.standalone)throw Error('Open LifeOS from its Home Screen icon to enable iPhone notifications.');
-  const permission=await Notification.requestPermission();
-  if(permission!=='granted')throw Error('Notification permission is off. Check your phone notification settings.');
+  if(Notification.permission==='denied')throw Error('Notification permission is off. Enable LifeOS in your phone settings.');
+  const permission=Notification.permission==='granted'?'granted':await Notification.requestPermission();
+  if(permission!=='granted')throw Error('Notification permission is off. Check your phone settings.');
   const reg=await navigator.serviceWorker.ready;
   let subscription=await reg.pushManager.getSubscription();
   if(subscription&&!pushKeyMatches(subscription)){
    await subscription.unsubscribe();subscription=null;localStorage.removeItem('lifeos.pushToken');
   }
   subscription=subscription||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(config.publicKey)});
-  const d=await pushRequest(pushPayload('subscribe',subscription));
-  localStorage.setItem('lifeos.pushToken',d.manageToken);pushEnabled=true;pushIssue='';render();
-  toast('Phone connected. '+d.reminderCount+' reminders synced. Try Send a test.');
- }catch(e){pushAuthFailure(e);toast(String(e.message||e));}
+  let response;
+  try{response=await pushRequest(pushPayload('subscribe',subscription));}
+  catch(error){
+   if(error.code==='DEVICE_TOKEN_MISMATCH'||error.code==='DEVICE_UNAUTHORIZED'){
+    await startPushRecovery(subscription);return;
+   }
+   throw error;
+  }
+  localStorage.setItem('lifeos.pushToken',response.manageToken);
+  localStorage.removeItem('lifeos.pushRecoveryPending');
+  pushEnabled=true;pushRecoveryPending=false;pushIssue='';render();
+  toast('Phone registered. '+response.reminderCount+' reminders synced. Send a test to confirm.');
+ }catch(error){
+  if(error.code==='RECOVERY_COOLDOWN')pushIssue='A code was already sent. Check notifications, or request another code in about a minute.';
+  else if(error.code==='RECOVERY_RATE_LIMIT')pushIssue='Too many verification requests. Please try again later.';
+  else if(error.code==='VAPID_REJECTED')pushIssue='The push provider rejected the server keys. Check your matching VAPID key pair in Netlify.';
+  else if(error.code==='PUSH_EXPIRED')pushIssue='Your old subscription expired. Tap Enable notifications again to create a new one.';
+  else pushIssue=String(error.message||error);
+  render();toast(pushIssue);
+ }
 }
 async function disablePush(){
  try{
   const sub=await getPushSub();
   if(sub){await pushRequest(pushPayload('unsubscribe',sub));await sub.unsubscribe();}
-  localStorage.removeItem('lifeos.pushToken');pushEnabled=false;pushIssue='';render();toast('Notifications disconnected from this phone.');
+  localStorage.removeItem('lifeos.pushToken');pushEnabled=false;pushRecoveryPending=false;pushIssue='';localStorage.removeItem('lifeos.pushRecoveryPending');render();toast('Notifications disconnected from this phone.');
  }catch(e){toast('Could not disable push: '+String(e.message||e));}
 }
 async function repairPush(){
- try{
-  if(!config.configured)throw Error('Set up notification keys in Netlify first.');
-  const sub=await getPushSub();
-  if(sub&&getManageToken()){
-   try{await pushRequest(pushPayload('unsubscribe',sub));}
-   catch(e){console.warn('Previous subscription could not be revoked. Reconnecting locally.');}
-  }
-  if(sub)await sub.unsubscribe();
-  localStorage.removeItem('lifeos.pushToken');pushEnabled=false;pushIssue='Reconnecting this device…';render();
-  await enablePush();
- }catch(e){pushEnabled=false;pushIssue='Reconnection failed. Check notification permission and try again.';render();toast(String(e.message||e));}
+ // Never delete the local subscription or token as a first step: that can
+ // strand the old registration on the server, which is precisely the failure
+ // this recovery process fixes.
+ await enablePush();
 }
 let syncTimer;
 function syncReminder(){if(!pushEnabled)return;clearTimeout(syncTimer);syncTimer=setTimeout(()=>syncAllReminders(true),450);}
@@ -364,28 +403,24 @@ async function syncAllReminders(silent=false){
  }catch(e){pushAuthFailure(e);if(!silent)toast('Schedule sync failed: '+String(e.message||e));}
 }
 async function sendTestNotification(){
+ if(!pushEnabled){toast('Verify this device before testing background notifications.');return;}
  try{
-  if(pushEnabled){
-   const sub=await getPushSub();if(!sub)throw Error('Missing device subscription.');
-   await pushRequest(pushPayload('test',sub));toast('Test push accepted by the provider. Check your lock screen.');return;
-  }
-  if(!('Notification' in window))throw Error('This browser does not support notifications.');
-  const p=await Notification.requestPermission();if(p!=='granted')throw Error('Notification permission denied.');
-  const reg=await navigator.serviceWorker.ready;
-  await reg.showNotification('LifeOS · Local notification test',{body:'Notifications can appear while LifeOS is available. Enable background push for scheduled alerts even when it is closed.',icon:'/icon.svg',tag:'lifeos-test'});
-  toast('Local test sent. This does not test background delivery.');
- }catch(e){pushAuthFailure(e);toast(String(e.message||e));}
+  const sub=await getPushSub();if(!sub)throw Error('No phone subscription found. Reconnect the device.');
+  const response=await pushRequest(pushPayload('test',sub));
+  if(!response.acceptedByProvider)throw Error('Push provider did not confirm acceptance.');
+  toast('Test accepted by the push provider. Check your phone notifications.');
+ }catch(e){pushAuthFailure(e);toast('Test failed: '+String(e.message||e));}
 }
 async function checkPushStatus(){
  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!config.configured){pushEnabled=false;render();return;}
  try{
   const sub=await getPushSub();
   if(!sub||!getManageToken()){
-   pushEnabled=false;pushIssue=sub?'An earlier subscription lost its authorization. Reconnect this device.':'';render();return;
+   pushEnabled=false;pushIssue=sub?'This device needs verification. Select Reconnect this device to request a code.':'';render();return;
   }
   if(!pushKeyMatches(sub)){pushEnabled=false;pushIssue='Notification keys changed. Reconnect this device.';render();return;}
   const d=await pushRequest(pushPayload('status',sub));
-  pushEnabled=Boolean(d.enrolled);pushIssue=pushEnabled?'':'The server could not verify this device. Reconnect notifications.';render();
+  pushEnabled=Boolean(d.enrolled);if(pushEnabled){pushRecoveryPending=false;localStorage.removeItem('lifeos.pushRecoveryPending');}pushIssue=pushEnabled?'':pushRecoveryPending?'Enter the verification code from the notification below.':'The server could not verify this device. Reconnect notifications.';render();
  }catch(e){pushEnabled=false;pushIssue='Cannot verify notifications right now. Retry or reconnect the device.';render();}
 }
 function del(id){const obj=db.items.find(x=>x.id===id);if(!obj||!confirm('Delete "'+obj.title+'"? This cannot be undone.'))return;db.items=db.items.filter(x=>x.id!==id);$('#entryDialog').close();save();if(obj.alert)syncReminder({...obj,alert:false});toast('Entry deleted.');}
@@ -423,6 +458,10 @@ $('#mobileMore').onclick=()=>{$('#sidebar').classList.add('open');$('#shade').cl
 $('#searchButton').onclick=searchAll;
 $('#bellButton').onclick=()=>setPage('reminders');
 $('#avatarButton').onclick=()=>setPage('settings');
+document.addEventListener('click',e=>{if(e.target.closest('[data-push-verify]'))verifyPushRecovery();});
+document.addEventListener('keydown',e=>{
+ if(e.key==='Enter'&&e.target?.id==='pushRecoveryCode'){e.preventDefault();verifyPushRecovery();}
+});
 document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();searchAll();}if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='n'){e.preventDefault();quickAdd();}});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkForeground();});
 window.addEventListener('hashchange',()=>{const raw=location.hash.slice(1),page=raw.split('?')[0],focus=new URLSearchParams(raw.split('?')[1]||'').get('focus');if(META[page])setPage(page);if(focus){const it=db.items.find(x=>x.id===focus);if(it)openEntry(it.kind,it.id);}});
