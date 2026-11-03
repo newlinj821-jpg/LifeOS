@@ -53,7 +53,7 @@
       return;
     }
     baseRender();
-    if(currentPage==='today'&&currentMode()==='simple')$('#view').innerHTML=simpleToday();
+    if(currentMode()==='simple'){if(currentPage==='today')$('#view').innerHTML=simpleToday();else if(currentPage==='planner')$('#view').innerHTML=simplePlanner();else if(currentPage==='reminders')$('#view').innerHTML=simpleReminders();}
     if(currentPage==='settings'&&currentMode()==='simple'){
       const oldSection=[...document.querySelectorAll('#view section')].find(x=>x.querySelector('h2')?.textContent==='Show or hide modules');
       if(oldSection)oldSection.hidden=true;
@@ -88,6 +88,43 @@
         ).join('')+'</div></section>'
       ).join('')+'</div>'+
       '<div class="simple-explore-footer"><p class="fine">Want more controls visible all the time?</p><button class="outline-btn" data-nav="settings">Change display mode</button></div>';
+  }
+  function simplePlanner(){
+    const today=dayKey(new Date()),types=new Set(['task','habit','chore']);
+    const pending=db.items.filter(x=>types.has(x.kind)&&!doneOn(x));
+    const due=pending.filter(x=>x.dueAt&&dayKey(new Date(x.dueAt))<=today).sort((a,b)=>new Date(a.dueAt)-new Date(b.dueAt));
+    const later=pending.filter(x=>x.dueAt&&dayKey(new Date(x.dueAt))>today).sort((a,b)=>new Date(a.dueAt)-new Date(b.dueAt));
+    const unscheduled=pending.filter(x=>!x.dueAt);
+    const section=(name,arr,buttonText,kind)=>'<section class="panel"><div class="panel-head"><h2>'+name+'</h2>'+
+      (buttonText?'<button class="minor" data-life-mini="'+kind+'">'+buttonText+'</button>':'')+'</div>'+
+      (arr.length?arr.slice(0,20).map(compactItem).join(''):'<p class="simple-list-placeholder">Nothing here.</p>')+'</section>';
+    return header('Your tasks','Everything you need to do, without project-management overhead.',
+      '<button class="primary-btn" data-life-mini="task">＋ Add task</button>')+
+      '<div class="simple-plan-layout"><div class="stack">'+section('Due or overdue',due,'Add','task')+
+      section('Coming up',later,'','task')+'</div><div class="stack">'+
+      section('Whenever you have time',unscheduled,'Add task','task')+
+      '<section class="panel panel-pad"><h2>Need a realistic schedule?</h2><p class="fine" style="margin:8px 0 15px">LifeOS can suggest what fits your day based on available time and energy.</p>'+
+      '<button class="outline-btn" data-nav="dayplan">✦ Build my day</button></section></div></div>';
+  }
+  function simpleReminders(){
+    const active=db.items.filter(x=>x.alert&&x.dueAt&&(!doneOn(x)||x.repeat&&x.repeat!=='none'))
+      .map(x=>({item:x,next:nextOccurrence(x)})).filter(x=>x.next instanceof Date&&!Number.isNaN(+x.next))
+      .sort((a,b)=>a.next-b.next);
+    const rows=active.map(({item,next})=>
+      '<button class="simple-reminder-row" data-edit="'+safe(item.id)+'"><span class="simple-reminder-symbol">♧</span>'+
+      '<span class="simple-reminder-text"><strong>'+safe(item.title)+'</strong><small>'+
+      safe(dateLabel(next))+' · '+safe(timeLabel(next))+
+      (item.repeat&&item.repeat!=='none'?' · '+safe(item.repeat):'')+
+      '</small></span><span class="simple-chevron">›</span></button>').join('');
+    const status=pushEnabled?
+      'Background push is connected to this device. Changes are synced to your notification schedule.':
+      'To receive alerts when LifeOS is closed, enable background notifications in Settings.';
+    return header('Reminders','What to remember, when to remember it, and nothing else to configure unless you want to.',
+      '<button class="primary-btn" data-life-mini="reminder">＋ New reminder</button>')+
+      '<div class="simple-reminder-status"><span class="'+(pushEnabled?'connected':'not-connected')+'"></span><p>'+status+'</p>'+
+      '<button class="outline-btn" data-nav="settings">Settings</button></div>'+
+      '<section class="panel"><div class="panel-head"><h2>Scheduled reminders</h2><span class="tiny">'+active.length+' active</span></div>'+
+      (rows||'<div class="simple-empty compact"><p>No scheduled reminders. Add one above.</p></div>')+'</section>';
   }
   function simpleToday(){
     const date=dayKey(new Date()), hour=new Date().getHours(),greet=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
