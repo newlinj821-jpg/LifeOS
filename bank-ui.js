@@ -117,7 +117,7 @@
    state.ready=true;
    if(state.session){try{const x=await api('status');state.summary=x.summary;}catch{state.session='';sessionStorage.removeItem('lifeos.bankSession');}}
   }catch(e){state.ready=true;state.message=e.message;}
-  finally{inFlight=false;redraw();}
+  finally{inFlight=false;redraw();if(new URLSearchParams(location.search).has('oauth_state_id'))resumeOAuth();}
  }
  async function run(action,data={}){
   if(state.busy)return;
@@ -131,7 +131,48 @@
   }catch(e){state.message=e.message||'Unable to complete bank action.';}
   finally{state.busy=false;redraw();}
  }
- let linkLoading;
+ let linkLoading,oauthRunning=false;
+ const oauthStoreKey='lifeos.plaidOAuth';
+ function rememberOAuth(token,updateItemId){
+  try{sessionStorage.setItem(oauthStoreKey,JSON.stringify({token,updateItemId,createdAt:Date.now()}));}catch{}
+ }
+ function clearOAuth(){
+  try{sessionStorage.removeItem(oauthStoreKey);}catch{}
+  if(new URLSearchParams(location.search).has('oauth_state_id')){
+   try{history.replaceState(null,'',location.pathname+'#money');}catch{}
+  }
+ }
+ async function finishLink(publicToken,metadata,updateItemId,handler){
+  try{
+   if(updateItemId){await run('refresh');toast('Bank connection updated.');}
+   else{await run('exchange',{publicToken,institution:metadata?.institution?.name||'Bank'});await run('refresh');}
+  }finally{clearOAuth();handler.destroy?.();}
+ }
+ function createHandler(token,updateItemId='',receivedRedirectUri=''){
+  let handler;
+  const options={token,onSuccess:async(publicToken,metadata)=>{await finishLink(publicToken,metadata,updateItemId,handler);},
+   onExit:error=>{if(error)state.message=error.display_message||error.error_message||'Bank connection closed.';
+    clearOAuth();handler.destroy?.();redraw();}};
+  if(receivedRedirectUri)options.receivedRedirectUri=receivedRedirectUri;
+  handler=window.Plaid.create(options);
+  return handler;
+ }
+ async function resumeOAuth(){
+  if(oauthRunning||!new URLSearchParams(location.search).has('oauth_state_id'))return;
+  oauthRunning=true;
+  try{
+   const original=JSON.parse(sessionStorage.getItem(oauthStoreKey)||'null');
+   if(!original||!original.token||Date.now()-original.createdAt>30*60_000)
+    throw Error('The bank sign-in session expired or returned to a different browser. Open LifeOS in Safari and connect your bank there.');
+   if(!state.session)throw Error('Unlock your bank view with your LifeOS bank key to finish this connection.');
+   await loadLink();
+   if(currentPage!=='money')setPage('money');
+   const url=new URL(location.href);url.hash='';
+   const handler=createHandler(original.token,original.updateItemId,url.toString());
+   handler.open();
+  }catch(e){state.message=e.message||'Unable to resume bank sign-in.';state.error=true;redraw();}
+  finally{oauthRunning=false;}
+ }
  function loadLink(){
   if(window.Plaid?.create)return Promise.resolve();
   if(linkLoading)return linkLoading;
@@ -148,11 +189,8 @@
   try{
    await loadLink();
    const data=await api('link-token',updateItemId?{updateItemId}:{});
-   const handler=window.Plaid.create({token:data.linkToken,onSuccess:async(publicToken,metadata)=>{
-     if(updateItemId){await run('refresh');toast('Bank reconnected.');}
-     else{await run('exchange',{publicToken,institution:metadata?.institution?.name||'Bank'});await run('refresh');}
-     handler.destroy?.();
-   },onExit:err=>{if(err)state.message=err.display_message||err.error_message||'Bank connection closed.';handler.destroy?.();redraw();}});
+   rememberOAuth(data.linkToken,updateItemId);
+   const handler=createHandler(data.linkToken,updateItemId);
    handler.open();
   }catch(e){state.message=e.message||'Could not open Plaid.';}
   finally{state.busy=false;redraw();}
@@ -177,6 +215,7 @@
    try{const result=await api('unlock',{setupKey:key},'');
     state.session=result.session;sessionStorage.setItem('lifeos.bankSession',state.session);
     state.summary=result.summary;state.tab='accounts';state.message='';toast('Bank account view unlocked.');
+    if(new URLSearchParams(location.search).has('oauth_state_id'))resumeOAuth();
    }catch(err){state.message=err.message||'Bank access failed.';}
    redraw();return;
   }
