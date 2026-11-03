@@ -59,7 +59,8 @@
       return;
     }
     baseRender();
-    if(currentMode()==='simple'){if(currentPage==='today')$('#view').innerHTML=simpleToday();else if(currentPage==='planner')$('#view').innerHTML=simplePlanner();else if(currentPage==='reminders')$('#view').innerHTML=simpleReminders();}
+    if(currentPage==='today')$('#view').innerHTML=simpleToday();
+    if(currentMode()==='simple'){if(currentPage==='planner')$('#view').innerHTML=simplePlanner();else if(currentPage==='reminders')$('#view').innerHTML=simpleReminders();}
     if(currentPage==='settings'&&currentMode()==='simple'){
       const oldSection=[...document.querySelectorAll('#view section')].find(x=>x.querySelector('h2')?.textContent==='Show or hide modules');
       if(oldSection)oldSection.hidden=true;
@@ -165,7 +166,7 @@
     const next=upcoming.length?upcoming.slice(0,4).map(x=>
       '<button class="simple-upcoming-item" data-edit="'+safe(x.id)+'"><span class="simple-upcoming-icon">'+safe(KIND[x.kind]?.icon||'◌')+'</span><span><strong>'+safe(x.title)+'</strong><small>'+safe(timeLabel(nextOccurrence(x)))+' · '+safe(dateLabel(nextOccurrence(x)))+'</small></span><span class="simple-chevron">›</span></button>'
      ).join(''):'<div class="simple-empty compact"><p>Nothing scheduled next.</p></div>';
-    const focusLinks=logic.selectedExtras(focus(),'simple').filter(k=>META[k]).map(k=>
+    const focusLinks=logic.selectedExtras(focus(),currentMode()).filter(k=>META[k]).map(k=>
       '<button class="simple-focus-link" data-nav="'+k+'"><span>'+META[k].icon+'</span>'+safe(META[k].label)+'</button>').join('');
     return '<section class="simple-today-hero"><div class="eyebrow">'+safe(dateText).toUpperCase()+'</div><h1>'+greet+(db.settings.name?', '+safe(db.settings.name):'')+'.</h1><p>'+ (db.settings.lowEnergy?'Essentials first. Keep today manageable.':'Here is what matters today. You can handle the rest when you need it.')+'</p><div class="simple-hero-actions">'+
       '<button class="primary-btn" data-life-mini="task">＋ Add task</button><button class="outline-btn" data-nav="dayplan">✦ Plan my day</button><button class="ghost-btn" data-nav="capture">Quick capture</button></div></section>'+
