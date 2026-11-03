@@ -37,7 +37,7 @@ const KIND={
 };
 const SECTION_KINDS={planner:['task'],calendar:['event'],routines:['habit'],fitness:['workout'],food:['meal'],money:['bill'],home:['chore'],pets:['pet'],wellness:['checkin'],projects:['project'],goals:['goal'],vault:['note'],journal:['journal'],reminders:['reminder']};
 const $=sel=>document.querySelector(sel);
-let currentPage='today', filter='all', keyword='', selectedDay=dayKey(new Date()), calendarCursor=new Date(), config={}, pushEnabled=false, pushIssue='', pushRecoveryPending=localStorage.getItem('lifeos.pushRecoveryPending')==='1', toastHandle=0, pendingSync=false;
+let currentPage='today', filter='all', keyword='', selectedDay=dayKey(new Date()), calendarCursor=new Date(), config={}, pushEnabled=false, pushIssue='', pushRecoveryPending=localStorage.getItem('lifeos.pushRecoveryPending')==='1', recoveryCodeFromPush='',recoveryVerifying=false, toastHandle=0, pendingSync=false;
 const defaults=()=>({version:1,items:[],water:{},settings:{name:'',theme:'dark',budget:0,lowEnergy:false,hidden:[],dailyWater:8,privatePush:false,quietEnabled:false,quietStart:'22:00',quietEnd:'07:00'},fired:{},createdAt:Date.now()});
 function load(){try{const obj=JSON.parse(localStorage.getItem(STORE));if(obj&&Array.isArray(obj.items))return {...defaults(),...obj,settings:{...defaults().settings,...obj.settings}};}catch(e){}return defaults();}
 let db=load();
@@ -173,7 +173,7 @@ function settingsPage(){
  const s=db.settings,modules=Object.entries(META).filter(([k])=>!['today','settings'].includes(k));
  const configured=!!(config.configured&&config.publicKey);
  const status=pushIssue||(pushEnabled?'This phone is registered. Send a test to verify delivery.':pushRecoveryPending?'Enter the six-digit code from the notification to reconnect this phone.':!configured?'The notification service is not configured in Netlify yet.':'Notifications are not connected to this phone. Enable them from the installed LifeOS app.');
- const recoveryMarkup=pushRecoveryPending&&!pushEnabled?'<div class="push-recovery-form" role="group" aria-label="Verify this phone"><label for="pushRecoveryCode"><strong>Enter your verification code</strong><small>Check this phone’s notification center. The code is valid for 10 minutes.</small></label><div class="push-recovery-entry"><input id="pushRecoveryCode" class="field" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="6-digit code" aria-label="Six digit verification code"><button type="button" class="primary-btn" data-push-verify>Verify phone</button></div><p class="fine">No notification? Open Connection options and request another code after one minute.</p></div>':'';
+ const recoveryMarkup=pushRecoveryPending&&!pushEnabled?'<div class="push-recovery-form" role="group" aria-label="Verify this phone"><label for="pushRecoveryCode"><strong>Enter your verification code</strong><small>LifeOS tries to reconnect automatically. If it does not, enter the code from this phone’s notification center (valid for 10 minutes).</small></label><div class="push-recovery-entry"><input id="pushRecoveryCode" class="field" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="6-digit code" aria-label="Six digit verification code"><button type="button" class="primary-btn" data-push-verify>Verify phone</button></div><p class="fine">No notification? Open Connection options and request another code after one minute.</p></div>':'';
  const moduleLines=modules.map(([k,v])=>'<label class="toggle-line"><div><strong>'+v.icon+' '+v.label+'</strong><p>'+safe(v.desc)+'</p></div><input class="toggle" type="checkbox" data-module="'+k+'" '+(!s.hidden.includes(k)?'checked':'')+'></label>').join('');
  return header('Settings','Your personal preferences, privacy controls and notification delivery.')+
  '<div class="settings-grid"><section class="panel panel-pad"><h2>Personalize LifeOS</h2><p class="fine" style="margin:7px 0 14px">Choose a display name, preferred color theme and personal targets.</p><div class="modal-grid"><div class="form-group"><label for="settingName">Display name</label><input id="settingName" class="field" maxlength="45" value="'+safe(s.name)+'" placeholder="Your name"></div><div class="form-group"><label for="settingTheme">Appearance</label><select id="settingTheme" class="field"><option value="dark" '+(s.theme==='dark'?'selected':'')+'>Midnight dark</option><option value="light" '+(s.theme==='light'?'selected':'')+'>Daylight light</option></select></div><div class="form-group"><label for="settingBudget">Monthly budget ($)</label><input id="settingBudget" class="field" type="number" min="0" step=".01" value="'+(s.budget||0)+'"></div><div class="form-group"><label for="settingWater">Water target (servings)</label><input id="settingWater" class="field" type="number" min="1" max="30" value="'+(s.dailyWater||8)+'"></div></div><div class="button-row">'+btn('Save preferences','save-settings')+'</div><div class="hr"></div><label class="toggle-line"><div><strong>Low-energy mode</strong><p>Offer a smaller, more forgiving daily focus.</p></div><input type="checkbox" class="toggle" data-setting="lowEnergy" '+(s.lowEnergy?'checked':'')+'></label></section>'+
@@ -316,31 +316,35 @@ function pushAuthFailure(error){
 }
 function pushPayload(action,sub){return {action,subscription:sub.toJSON(),manageToken:getManageToken(),reminders:pushItems(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,quiet:{enabled:!!db.settings.quietEnabled,start:db.settings.quietStart||'22:00',end:db.settings.quietEnd||'07:00'},privateMode:!!db.settings.privatePush};}
 async function startPushRecovery(subscription){
+ recoveryCodeFromPush='';
  const response=await pushRequest(pushPayload('recover-start',subscription));
  if(response.alreadyRegistered){await checkPushStatus();return;}
  pushRecoveryPending=true;localStorage.setItem('lifeos.pushRecoveryPending','1');
  pushEnabled=false;
- pushIssue='A six-digit code was sent to this phone. Find it in your notifications and enter it below to verify this device.';
- render();toast('Verification sent to this phone. Enter the six-digit code below.');
+ pushIssue='Verification sent to this phone. LifeOS will try to reconnect automatically; otherwise enter the six-digit code below.';
+ render();if(recoveryCodeFromPush)verifyPushRecovery(recoveryCodeFromPush);else toast('Verification sent. Check this phone’s notifications if reconnection does not complete.');
 }
-async function verifyPushRecovery(){
- const code=String($('#pushRecoveryCode')?.value||'').replace(/\s/g,'');
- if(!/^\d{6}$/.test(code)){toast('Enter the six-digit code from your LifeOS notification.');return;}
+async function verifyPushRecovery(receivedCode){
+ if(recoveryVerifying)return;
+ const code=String(typeof receivedCode==='string'?receivedCode:$('#pushRecoveryCode')?.value||'').replace(/\s/g,'');
+ if(!/^[0-9]{6}$/.test(code)){toast('Enter the six-digit code from your LifeOS notification.');return;}
+ recoveryVerifying=true;
  try{
   const sub=await getPushSub();if(!sub)throw Error('No phone subscription found. Choose Enable notifications.');
   const response=await pushRequest({...pushPayload('recover-finish',sub),code});
   if(!response.manageToken)throw Error('Verification succeeded but no device token was returned.');
   localStorage.setItem('lifeos.pushToken',response.manageToken);
   pushEnabled=true;pushRecoveryPending=false;pushIssue='';
-  localStorage.removeItem('lifeos.pushRecoveryPending');render();
-  toast('This phone is verified. '+response.reminderCount+' reminder schedules synced. Send a test to confirm delivery.');
+  localStorage.removeItem('lifeos.pushRecoveryPending');recoveryCodeFromPush='';render();
+  try{const reg=await navigator.serviceWorker.ready;const notices=await reg.getNotifications({tag:'lifeos-verify-device'});notices.forEach(n=>n.close());}catch{}
+  toast('Phone verified. '+response.reminderCount+' reminders synced. Send a test to check delivery.');
  }catch(error){
   pushIssue=error.code==='CODE_EXPIRED'?'Your verification code expired. Request a new one.':
    error.code==='TOO_MANY_ATTEMPTS'?'Too many incorrect attempts. Request a fresh code.':
    error.code==='INVALID_CODE'?'That code was not accepted. Check the notification and try again.':
    'Could not verify: '+String(error.message||error);
   render();toast(pushIssue);
- }
+ }finally{recoveryVerifying=false;}
 }
 async function enablePush(){
  try{
@@ -458,6 +462,14 @@ $('#mobileMore').onclick=()=>{$('#sidebar').classList.add('open');$('#shade').cl
 $('#searchButton').onclick=searchAll;
 $('#bellButton').onclick=()=>setPage('reminders');
 $('#avatarButton').onclick=()=>setPage('settings');
+if('serviceWorker' in navigator){
+ navigator.serviceWorker.addEventListener('message',event=>{
+  const data=event.data;
+  if(data?.type!=='lifeos-device-verification'||typeof data.code!=='string'||! /^[0-9]{6}$/.test(data.code))return;
+  recoveryCodeFromPush=data.code;
+  if(pushRecoveryPending&&!pushEnabled)verifyPushRecovery(data.code);
+ });
+}
 document.addEventListener('click',e=>{if(e.target.closest('[data-push-verify]'))verifyPushRecovery();});
 document.addEventListener('keydown',e=>{
  if(e.key==='Enter'&&e.target?.id==='pushRecoveryCode'){e.preventDefault();verifyPushRecovery();}
