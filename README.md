@@ -8,6 +8,22 @@ Today dashboard, adaptive day planner, natural-language quick capture, personal 
 
 Reminders support one-time, daily, weekday, weekly and monthly schedules; advance warnings at the exact scheduled time, 5, 10, 15, 30, 60 minutes or one day before; lock-screen privacy, quiet hours, normal/high priority, device-specific settings and a delivery test. The server evaluates schedules every five minutes. Device, browser and network conditions can cause delays.
 
+## Keep everyday use simple
+
+On a **new device with no saved LifeOS records**, a short, optional welcome setup asks how you want to use the app. Choose which areas matter to you, select a display mode, and tap **Start LifeOS** or **Skip setup**. LifeOS defaults to **Simple Mode**; existing personal records are preserved.
+
+- **Simple (default):** a focused Today dashboard, a concise Tasks screen, a clean Reminders list, one-tap water logging, minimal entry forms, and selected favorite areas in the sidebar. An **All modules** screen keeps everything available without crowding the navigation.
+- **Standard:** shows all selected favorite areas plus insights and the daily planning tools in navigation.
+- **Advanced:** exposes all available modules, advanced automation and detailed settings. You can still use the same simple quick-entry shortcuts.
+
+To change modes or favorite areas, open **Settings → Your experience**. Changing modes is **presentation-only**; it does not erase data or turn off alerts. You can reopen the optional setup any time.
+
+The Today screen has quick shortcuts for tasks, meals, workouts, reminders and water. Use **Add new** for a short form; choose **More options** if an entry needs richer details such as instructions, priorities, nutritional information, costs or additional scheduling.
+
+### Build and verify
+
+LifeOS is a static Progressive Web App with Netlify Functions. `npm run build` writes the deployment-ready website to `dist/`, including all experience-mode scripts and styles. The checked-in Netlify configuration publishes that directory, and GitHub Actions checks the build and unit tests after changes.
+
 ## Deploy via Netlify
 
 1. Open Netlify > Add new project > Import an existing project > GitHub.
@@ -53,9 +69,8 @@ The application contains no advertisements or analytics tracking. It is not an e
 
 ## Developer notes
 
-The front end is index.html + styles.css + app.js + enhancements.js, with sw.js, manifest.webmanifest, and icon.svg for PWA installation. Push service functions are in netlify/functions and shared logic in netlify/lib. The repository includes automated syntax checks and unit tests for reminder time calculations and notification wording.
+The front end is index.html, app.js, enhancements.js, mode-core.js, simplicity.js, styles.css and simplicity.css, with sw.js, manifest.webmanifest, and icon.svg for PWA installation. Push service functions are in netlify/functions and shared logic in netlify/lib. The repository includes automated syntax checks and unit tests for reminder time calculations and notification wording.
 
-Run: node --check app.js\nRun: node --check enhancements.js
-Run: node --test tests/*.test.mjs
+Run: npm run build\nRun: npm run check\nRun: npm test
 
 For notification issues review the Netlify Functions logs for push and check-reminders. Verify all three VAPID variables and redeploy after modifying them.
