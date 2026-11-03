@@ -86,7 +86,7 @@ export const isVAIncome=t=>isDeposit(t)&&(
  /\bXXVA\s+BENEF\b/.test(incomeDescriptor(t))||
  /\bVA\s+(?:BENEFITS?|COMPENSATION)\b/.test(incomeDescriptor(t))
 );
-export const defaultBankPrefs=()=>({enabled:false,paycheck:true,otherDeposits:false,largeExpense:false,
+export const defaultBankPrefs=()=>({enabled:false,paycheck:true,otherDeposits:true,largeExpense:false,
  largeExpenseAmount:300,lowBalance:false,lowBalanceAmount:100,showAmounts:false,
  expectedPaycheckAmount:null,
  paycheckMatches:[],quietStart:'22:00',quietEnd:'08:00',maxDaily:2});
@@ -95,7 +95,7 @@ export function bankPrefs(value){
  const money=(v,d)=>Number.isFinite(+v)&&+v>=1&&+v<=100000?roundMoney(+v):d;
  const time=(v,d)=>typeof v==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(v)?v:d;
  return {...defaults,enabled:x.enabled===true,paycheck:x.paycheck!==false,
-  otherDeposits:x.otherDeposits===true,largeExpense:x.largeExpense===true,
+  otherDeposits:x.otherDeposits!==false,largeExpense:x.largeExpense===true,
   largeExpenseAmount:money(x.largeExpenseAmount,300),lowBalance:x.lowBalance===true,
   lowBalanceAmount:money(x.lowBalanceAmount,100),showAmounts:x.showAmounts===true,
   expectedPaycheckAmount:x.expectedPaycheckAmount===null||x.expectedPaycheckAmount===''||x.expectedPaycheckAmount===undefined?null:money(x.expectedPaycheckAmount,null),
@@ -109,10 +109,9 @@ export function isPaycheck(t,config={}){
  // Exact cents matter: a larger VA credit or payroll payment is an ordinary
  // deposit, never an unexpected paycheck notification.
  if(p.expectedPaycheckAmount===null||Math.round(Math.abs(t.amount)*100)!==Math.round(p.expectedPaycheckAmount*100))return false;
- const label=incomeDescriptor(t);
- if(isVAIncome(t))return true;
- if(p.paycheckMatches.some(v=>label.includes(v)))return true;
- return /^INCOME_WAGES\b/.test(t.category||'')||/\bPAYROLL\b/.test(label);
+ // The user explicitly defines their paycheck by the posted amount. A credit
+ // above OR below that amount is a deposit, even when described as VA benefits.
+ return true;
 }
 export function paycheckHistory(transactions,config={}){
  const matches=(Array.isArray(transactions)?transactions:[]).filter(t=>isPaycheck(t,config)&&/^\d{4}-\d{2}-\d{2}$/.test(t.date||'')).sort((a,b)=>b.date.localeCompare(a.date));
