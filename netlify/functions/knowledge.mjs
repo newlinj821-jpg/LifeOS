@@ -35,7 +35,7 @@ export default async function handler(request){
  if(kind!=='holiday'&&!validSearch(q))return response({error:'Enter a search of 2–80 characters'},400);
  const country=String(args.get('country')||'US').toUpperCase(),year=Number(args.get('year')||new Date().getFullYear());
  if(kind==='holiday'&&(!/^[A-Z]{2}$/.test(country)||!Number.isInteger(year)||year<2024||year>2037))return response({error:'Enter a country code and year 2024–2037'},400);
- const source=providers[kind],key='public-'+kind+'-'+digest(kind==='holiday'?country+':'+year:kind==='exercise'?'catalog':q.toLowerCase());
+ const source=providers[kind],key='public-'+kind+'-'+digest(kind==='holiday'?country+':'+year:q.toLowerCase());
  const cached=await getCached(key);
  if(cached?.updatedAt&&now()-cached.updatedAt<ttl[kind])return response({...finalize(kind,q,cached.data,source),cache:'fresh',updatedAt:cached.updatedAt});
  try{
@@ -46,9 +46,13 @@ export default async function handler(request){
  u.searchParams.set('query',q);u.searchParams.set('pageSize','40');
  payload=await remote(u.toString(),9500);
  }else if(kind==='exercise'){
- try{payload=await remote('https://wger.de/api/v2/exerciseinfo/?limit=250&language=2',11000);}
- catch(e){console.warn('wger detail endpoint unavailable, attempting list endpoint',String(e.message).slice(0,120));
- payload=await remote('https://wger.de/api/v2/exercise/?limit=250&language=2',11000);}
+ // Query the documented name__search filter instead of blindly scanning a limited catalog page.
+ const u=new URL('https://wger.de/api/v2/exerciseinfo/');
+ u.searchParams.set('limit','100');u.searchParams.set('language','2');u.searchParams.set('name__search',q);
+ try{payload=await remote(u.toString(),10500);}
+ catch(e){console.warn('wger filtered endpoint unavailable, attempting basic exercise search',String(e.message).slice(0,120));
+ const fallback=new URL('https://wger.de/api/v2/exercise/');fallback.searchParams.set('language','2');fallback.searchParams.set('limit','150');fallback.searchParams.set('name__search',q);
+ payload=await remote(fallback.toString(),10500);}
  }else{
  payload=await remote('https://nagerholidays.com/api/v4/Holidays/'+country+'/'+year,8500);
  }
@@ -67,5 +71,5 @@ export default async function handler(request){
 }
 function finalize(kind,query,records,source){
  const filtered=kind==='exercise'?records.filter(x=>(x.title+' '+x.category+' '+x.description+' '+(x.muscles||[]).join(' ')+' '+(x.equipment||[]).join(' ')).toLowerCase().includes(query.toLowerCase())).slice(0,60):kind==='food'?records.slice(0,40):records.slice(0,100);
- return {source:kind,provider:source,query:kind==='holiday'?null:query,results:filtered,count:filtered.length,coverage:kind==='exercise'?'Searches a limited sample of the wger catalog; results are not exhaustive.':kind==='food'?'USDA values are reference estimates; verify quantities and product details.':null};
+ return {source:kind,provider:source,query:kind==='holiday'?null:query,results:filtered,count:filtered.length,coverage:kind==='exercise'?'Public exercise search from wger; descriptions and language coverage may vary.':kind==='food'?'USDA values are reference estimates; verify quantities and product details.':null};
 }
