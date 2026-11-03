@@ -35,6 +35,7 @@ jobs:
           node --check netlify/lib/push-recovery.mjs
           node --check netlify/functions/push.mjs
           node --check bank-ui.js
+          node --check input-reliability.js
           node --check netlify/lib/bank-data.mjs
           node --check netlify/lib/bank-background.mjs
           node --check netlify/functions/plaid.mjs
@@ -52,6 +53,7 @@ jobs:
           npm run build
           test -f dist/index.html
           test -f dist/app.js
+          test -f dist/input-reliability.js
           test -f dist/finance-core.js
           test -f dist/finance-ui.js
           test -f dist/finance.css
