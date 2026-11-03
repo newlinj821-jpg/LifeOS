@@ -35,7 +35,7 @@ const feedResponse=(calendar,id)=>{
 export default async function handler(request){
  const url=new URL(request.url);
  if(request.method==='GET'){
-  const id=String(url.searchParams.get('id')||'').replace(/\\.ics$/i,'');
+  const id=String(url.searchParams.get('id')||'').replace(/\.ics$/i,'');
   if(!ID_PATTERN.test(id))return error('INVALID_LINK','Invalid calendar link.',404);
   try{
    const current=await store().get('share-'+id,{type:'json'});
