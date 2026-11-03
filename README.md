@@ -31,7 +31,7 @@ The **Money** page now allows a simple local-first setup:
 1. Open **Money → Edit amounts** (shown automatically on first use).
 2. Enter **Monthly income** (expected take-home amount), **Current savings balance**, and optional **Savings goal**. Tap **Save amounts**.
 3. Add normal bills and expenses with **Add expense**. Choose category **Savings** for money you intend to transfer out of available income.
-4. **Savings transfer** is a shortcut that opens an editable expense prefilled to **$900, recurring monthly**. It does not create a transaction until you save it. You can change the amount or date.
+4. **Savings transfer** opens an expense with the **Savings** category and monthly recurrence selected, but **the amount starts blank**. Enter any amount and change the date or repeat schedule if you wish. No transaction is created until you save it.
 5. Switch months to review planned commitments, completed items, cash remaining after planned expenses, and savings goal progress.
 
 Savings transfers are counted as a **monthly expense allocation** in the available-income forecast, even though they are not consumption. The **Savings balance** is a separate manually entered real-world balance. Marking an expense paid does **not** silently increase that balance, since LifeOS cannot verify that a bank transfer occurred.
