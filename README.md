@@ -114,6 +114,19 @@ Each device receives a random private management token on enrollment, allowing i
 
 A private lock-screen option hides detailed reminder titles and text. Normal reminders can be silenced during quiet hours; high-priority reminders bypass them. Suppressed notifications are not automatically replayed. Power-saving modes, Focus/Do Not Disturb, unavailable network, push provider outages or cron delays can affect delivery. Do not rely on web push alone for urgent medical or safety-critical alerts.
 
+## Fix notification authorization on an existing iPhone or Android app
+
+A lost or mismatched local push-management token previously caused a repeated **“This device is not authorized”** error. The server now supports **proof-of-possession recovery** without deleting the local subscription or the user's LifeOS data:
+
+1. Install or update the newest LifeOS release and open it from the Home Screen.
+2. Open **Settings → Notifications → Connection options → Reconnect this device**.
+3. The server sends a six-digit code to this phone's actual Web Push endpoint. If LifeOS is open and the updated service worker receives it, verification completes automatically. Otherwise, type the code from the phone's notification center into the verification field within 10 minutes.
+4. Once **This device: Verified** appears, choose **Send a test**. Provider acceptance confirms the outgoing push was accepted; verify that it actually appears in the phone's notifications.
+
+Code delivery is rate-limited, verification permits only five incorrect attempts, and the server stores a salted code hash rather than the code itself. If the provider reports expired subscriptions or invalid VAPID credentials, LifeOS shows the corresponding cause rather than claiming connection success.
+
+**iOS status bar:** LifeOS now uses an opaque iPhone Home Screen status bar and a fixed mobile header to prevent content scrolling behind the clock. Existing installed shortcuts sometimes retain their original iOS status-bar mode. First update and reload LifeOS. If the overlap persists after deployment, **export a full LifeOS backup before removing/reinstalling the Home Screen shortcut**, because reinstalling may erase local data and device subscriptions.
+
 ## Data and privacy
 
 LifeOS saves personal records locally in the browser (localStorage). The complete JSON backup/export and import controls are in Settings. Each browser/device maintains separate local data; transferring a backup is the supported migration path. Exported backups can contain private details, so store them securely.
