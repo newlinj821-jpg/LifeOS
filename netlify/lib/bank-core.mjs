@@ -19,7 +19,7 @@ export const bankReady=()=>Boolean(
   /^[a-fA-F0-9]{64}$/.test(process.env.LIFEOS_BANK_VAULT_KEY||'')
 );
 export const blankVault=()=>({version:1,items:[],prefs:{
- vaDeposits:true,deposits:false,largePurchases:false,largeAmount:250,lowBalance:false,lowThreshold:100,
+ paycheck:true,expectedPaycheck:0,deposits:true,largePurchases:false,largeAmount:250,lowBalance:false,lowThreshold:100,
  showAmounts:false,showDetails:false
 },pushKey:null,updatedAt:0});
 function vaultKey(){
@@ -148,6 +148,13 @@ export async function refreshVault(vault,{transactions=true,liveBalance=false}={
  return {vault,newTransactions:news,warnings};
 }
 export const vaDeposit=t=>Boolean(t&&t.amount<0&&/(\bVA\s*(?:BENEF(?:ITS?)?|COMP(?:ENSATION)?|DISAB(?:ILITY)?)\b|\bVACP\b|\bVETERANS?\s+AFFAIRS\b|\bXXVA\s+BENEF\b|\bUS\s+TREAS(?:URY)?\s*310.{0,35}\bVA\b)/i.test(t.name||''));
+export function classifyDeposit(tx,prefs={}){
+ if(!tx||!Number.isFinite(Number(tx.amount))||Number(tx.amount)>=0||tx.pending===true||isTransfer(tx))return 'other';
+ const expected=Number(prefs.expectedPaycheck);
+ if(prefs.paycheck===true&&Number.isFinite(expected)&&expected>0&&
+     Math.round(Math.abs(tx.amount)*100)===Math.round(expected*100))return 'paycheck';
+ return 'deposit';
+}
 const dollars=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Math.abs(Number(n)||0));
 export function financeAlerts(oldVault,newVault,newTransactions,now=Date.now()){
  const prefs={...blankVault().prefs,...(newVault.prefs||{})},alerts=[];
@@ -159,11 +166,12 @@ export function financeAlerts(oldVault,newVault,newTransactions,now=Date.now()){
   const day=Date.parse(t.date+'T12:00:00Z');
   if(!Number.isFinite(day)||now-day>3*86400000||day-now>86400000)continue;
   const source=(t.institution||'Bank').slice(0,55);
-  const isVA=vaDeposit(t);
-  if(t.amount<0&&(isVA?prefs.vaDeposits:prefs.deposits)){
-   const title=isVA?'VA benefits deposited':'Bank deposit received';
-   const body=(amountEnabled?dollars(t.amount)+' received':'New deposit received')+' · '+source+(isVA?' · VA benefits':'')+'.';
-   alerts.push({id:'bank:deposit:'+t.id,kind:isVA?'va-deposit':'deposit',title,body,createdAt:now});
+  const depositType=classifyDeposit(t,prefs);
+  if(t.amount<0&&depositType!=='other'&&(depositType==='paycheck'?prefs.paycheck:prefs.deposits)){
+   const paycheck=depositType==='paycheck';
+   const title=paycheck?'Paycheck received':'Deposit received';
+   const body=(amountEnabled?dollars(t.amount)+' received':'A new deposit was posted')+' · '+source+'.';
+   alerts.push({id:'bank:deposit:'+t.id,kind:depositType,title,body,createdAt:now});
   }
   if(prefs.largePurchases&&t.amount>0&&t.amount>=Math.max(1,Number(prefs.largeAmount)||250)){
    const body=(amountEnabled?dollars(t.amount)+' at '+t.name:'A purchase reached your spending threshold')+' · '+source+'.';
