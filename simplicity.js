@@ -67,7 +67,8 @@
   };
   const originalAutomationPage=lifeAutomationPage;
   lifeAutomationPage=function(){
-    if(currentMode()==='advanced'||showCustomAutomation)return originalAutomationPage();
+    if(currentMode()==='advanced')return originalAutomationPage();
+    if(showCustomAutomation)return '<div class="simple-custom-back"><button class="outline-btn" data-life-template-back>‹ Back to easy automations</button></div>'+originalAutomationPage();
     const rules=db.automations||[];
     const templates=starterRules.map(r=>{
       const already=rules.some(x=>x.trigger===r.trigger&&x.title===r.title&&x.delay===r.delay);
@@ -272,7 +273,7 @@
   $('#newButton').onclick=openQuickPicker;
   $('#mobileAdd').onclick=openQuickPicker;
   document.addEventListener('click',event=>{
-    const target=event.target.closest('[data-life-mini],[data-life-water],[data-life-close],[data-life-expand],[data-life-more-types],[data-life-mode],[data-life-focus],[data-life-setup],[data-life-onboard-mode],[data-life-onboard-focus],[data-life-skip],[data-life-finish],[data-life-template],[data-life-custom-rules]');
+    const target=event.target.closest('[data-life-mini],[data-life-water],[data-life-close],[data-life-expand],[data-life-more-types],[data-life-mode],[data-life-focus],[data-life-setup],[data-life-onboard-mode],[data-life-onboard-focus],[data-life-skip],[data-life-finish],[data-life-template],[data-life-custom-rules],[data-life-template-back]');
     if(!target)return;
     if(target.hasAttribute('data-life-mini')){openMini(target.dataset.lifeMini);return;}
     if(target.hasAttribute('data-life-water')){const key=dayKey(new Date());db.water[key]=(db.water[key]||0)+1;save();toast('Water serving logged.');return;}
@@ -283,6 +284,7 @@
         '<button class="simple-picker-item" data-life-open-full="'+k+'"><span>'+v.icon+'</span><strong>'+safe(v.label)+'</strong></button>').join('')+'</div></div>';
       $('#quickDialog').showModal();return;}
     if(target.hasAttribute('data-life-custom-rules')){showCustomAutomation=true;render();return;}
+    if(target.hasAttribute('data-life-template-back')){showCustomAutomation=false;render();return;}
     if(target.hasAttribute('data-life-template')){
       const rule=starterRules.find(r=>r.id===target.dataset.lifeTemplate);
       if(!rule)return;
