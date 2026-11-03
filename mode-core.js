@@ -2,7 +2,7 @@
 (function (root) {
   'use strict';
   const MODES = ['simple','standard','advanced'];
-  const FOCUS = ['fitness','food','money','home','pets','wellness','routines','projects','goals','vault','journal'];
+  const FOCUS = ['fitness','food','money','home','pets','wellness','routines','projects','goals','vault','journal','library'];
   const CORE_SIMPLE = ['today','planner','dayplan','calendar','reminders','capture','explore'];
   const CORE_STANDARD = ['today','planner','dayplan','calendar','reminders','capture','insights','explore'];
   function mode(value) { return MODES.includes(value) ? value : 'simple'; }
