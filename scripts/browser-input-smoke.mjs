@@ -116,6 +116,8 @@ try{
  await insert('#financeIncome','2410.55');
  // Simulate user saving the income rather than merely setting a DOM value.
  await evaluate("document.querySelector('#financeIncome').blur();document.querySelector('#financeSetupForm button[type=submit]').click()");
+ const saved=await evaluate("(()=>{const form=document.querySelector('#financeSetupForm');return {finance:typeof db!=='undefined'?db.finance:null,stored:JSON.parse(localStorage.getItem('lifeos.data.v1')||'{}').finance,valid:form?.checkValidity(),values:form?[...new FormData(form).entries()]:[],toast:document.querySelector('#toast')?.textContent}})()");
+ console.log('Income save diagnostics:',JSON.stringify(saved));
  await until("(()=>{try{return JSON.parse(localStorage.getItem('lifeos.data.v1')||'{}').finance?.monthlyIncome===2410.55}catch{return false}})()", 'Income save',4000);
  console.log('PASS: income saved to the actual LifeOS database');
  await insert('#lifeBankKey','validPrivateBankUnlockKey123');
