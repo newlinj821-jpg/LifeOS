@@ -9,6 +9,9 @@
 [functions."check-reminders"]
   schedule = "*/5 * * * *"
 
+[functions."check-banks"]
+  schedule = "0 */4 * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]
