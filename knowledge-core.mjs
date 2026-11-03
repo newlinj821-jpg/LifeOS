@@ -6,7 +6,7 @@ export const providers=Object.freeze({
  template:{name:'LifeOS starter library',url:'',license:'LifeOS original reference templates',description:'Editable practical examples, not authoritative health advice'}
 });
 const clean=s=>String(s??'').replace(/<[^>]*>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/\s+/g,' ').trim();
-const numeric=v=>Number.isFinite(Number(v))?Number(v):null;
+const numeric=v=>v===null||v===undefined||v===''||!Number.isFinite(Number(v))?null:Number(v);
 export function validSearch(input){return typeof input==='string'&&input.length>=2&&input.length<=80&&!/[<>\x00-\x1f]/.test(input);}
 const findValue=(list,ids)=>{const x=(list||[]).find(n=>ids.includes(Number(n.nutrientId??n.nutrient?.id)));return x?numeric(x.value??x.amount):null;};
 export function normalizeFood(f){
