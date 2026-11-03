@@ -47,7 +47,7 @@ if(b.action==='recover-finish'){
   return json({code:exhausted?'TOO_MANY_ATTEMPTS':'INVALID_CODE',error:exhausted?'Too many incorrect codes. Request a new one after the cooldown.':'Incorrect verification code. Check your notification and try again.'},403);
  }
  const tz=String(b.timezone||'UTC');if(!validZone(tz))return json({code:'INVALID_TIMEZONE',error:'Invalid timezone'},400);
- const validTime=x=>/^([01]\\d|2[0-3]):[0-5]\\d$/.test(x||'');
+ const validTime=x=>/^([01]\d|2[0-3]):[0-5]\d$/.test(x||'');
  const quietInput=b.quiet||{};
  const newManageToken=token();
  const updated={...prev,subscription:b.subscription,manageHash:digest(newManageToken),
