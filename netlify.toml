@@ -9,7 +9,7 @@
 [functions."check-reminders"]
   schedule = "*/5 * * * *"
 
-[functions."check-bank"]
+[functions."check-banks"]
   schedule = "0 */4 * * *"
 
 [[headers]]
