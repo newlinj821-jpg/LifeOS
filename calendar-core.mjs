@@ -1,6 +1,6 @@
 /* LifeOS calendar interoperability: pure helpers, safe for browser and Netlify. */
 const isoOk=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(s)&&Number.isFinite(Date.parse(s));
-const dateOk=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&!Number.isNaN(Date.parse(s+'T12:00:00Z'));
+const dateOk=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s+'T12:00:00Z'))&&new Date(s+'T12:00:00Z').toISOString().slice(0,10)===s;
 const clean=s=>String(s??'').replace(/[\u0000-\u001f\u007f]/g,' ').replace(/\s+/g,' ').trim();
 const clamp=(n,a,b)=>Math.min(b,Math.max(a,Number.isFinite(Number(n))?Number(n):a));
 const stableId=s=>clean(s).replace(/[^a-zA-Z0-9_-]/g,'').slice(0,90);
@@ -79,13 +79,13 @@ function parseTime(value,params=''){
  }
  if(!/^\d{8}T\d{6}Z?$/.test(str))return null;
  const year=+str.slice(0,4),mon=+str.slice(4,6),day=+str.slice(6,8),h=+str.slice(9,11),m=+str.slice(11,13),sec=+str.slice(13,15);
- if(mon<1||mon>12||day<1||day>31||h>23||m>59||sec>59)return null;
+ if(mon<1||mon>12||day<1||day>31||h>23||m>59||sec>59||new Date(Date.UTC(year,mon-1,day)).getUTCDate()!==day)return null;
  let valueDate;
  if(str.endsWith('Z'))valueDate=new Date(Date.UTC(year,mon-1,day,h,m,sec));
  else {
   const tzMatch=String(params).match(/TZID=([^;:]+)/i);
   if(tzMatch){
-   const tz=tzMatch[1];
+   const tz=tzMatch[1].replace(/^\"|\"$/g,'');
    try{
     const guessed=Date.UTC(year,mon-1,day,h,m,sec);
     const formatter=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
