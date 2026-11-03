@@ -20,3 +20,17 @@
   for = "/sw.js"
   [headers.values]
     Cache-Control = "no-cache, must-revalidate"
+
+# Read-only, revocable calendar subscription URL for Apple Calendar and Google Calendar.
+[[redirects]]
+  from = "/calendar/:id.ics"
+  to = "/.netlify/functions/calendar-share?id=:id"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/calendar/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Referrer-Policy = "no-referrer"
+    X-Content-Type-Options = "nosniff"
