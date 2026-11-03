@@ -75,13 +75,17 @@ try{
  chrome=spawn(binary,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--no-first-run',
   '--disable-background-networking','--remote-debugging-port=9222','--user-data-dir='+sessionDir,
   '--window-size=430,930','about:blank'],{stdio:'ignore'});
- let pages;
+ let pages,tab;
  for(let i=0;i<90;i++){
-  try{pages=await (await fetch('http://127.0.0.1:9222/json/list')).json();if(pages?.[0]?.webSocketDebuggerUrl)break;}catch{}
+  try{
+   pages=await (await fetch('http://127.0.0.1:9222/json/list')).json();
+   tab=pages?.find(p=>p.type==='page'&&p.webSocketDebuggerUrl);
+   if(tab)break;
+  }catch{}
   await wait(100);
  }
- if(!pages?.[0]?.webSocketDebuggerUrl)throw Error('Chromium debugging endpoint unavailable');
- ws=new WebSocket(pages[0].webSocketDebuggerUrl);
+ if(!tab?.webSocketDebuggerUrl)throw Error('Chromium page debugging endpoint unavailable');
+ ws=new WebSocket(tab.webSocketDebuggerUrl);
  await new Promise((resolve,reject)=>{ws.onopen=resolve;ws.onerror=reject;});
  ws.onmessage=event=>{
   const payload=JSON.parse(event.data);
