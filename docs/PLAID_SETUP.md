@@ -62,7 +62,7 @@ LifeOS keeps the bank's encrypted access token on the Netlify server so backgrou
 
 ## Step 5 — Set your exact paycheck amount
 
-1. In **Money → Bank connection → Paychecks** (or **Alerts**), find **Your expected paycheck amount**.
+1. In **Money → Bank connection → Alerts**, find **Your expected paycheck amount**.
 2. Type the exact posted amount, down to the cent, and select **Save paycheck and alert settings**.
 3. A posted incoming credit of **exactly that amount** qualifies as a paycheck. A larger or smaller credit is an **ordinary deposit**. Identified transfers and refunds are excluded.
 4. LifeOS recognizes deposit descriptions including **VACP TREAS 310** and **XXVA BENEF**, but these labels do **not** override your exact amount.
@@ -75,10 +75,10 @@ Example: if your expected paycheck is `$2,150.75`, a posted `$2,150.75` credit c
 1. Install LifeOS to your iPhone/Android Home Screen and open it as a standalone app.
 2. Go to **LifeOS Settings → Notifications**, choose **Enable notifications**, and verify that your phone is connected. Use **Send a test** and confirm it appears on your phone.
 3. Go back to **Money → Bank connection → Alerts**, choose **Connect this phone for bank alerts**.
-4. Keep **Notify me when that paycheck is detected** on. Other-deposit alerts, large purchases, and low-balance alerts are **off by default**.
+4. Keep **Notify me when that paycheck is detected** on. Other-deposit alerts are **on by default**; large purchases and low-balance alerts are off until you choose them.
 5. Set the expected paycheck amount and save the settings.
 
-Paycheck notifications are triggered **only for newly detected posted deposits**, never for historical backfill or pending transactions. Bank notifications have **quiet hours of 10 PM–8 AM** and a limit of **two bank alerts per day**; the lock screen hides amounts unless you enable them. Turning off bank alerts does not disconnect your bank.
+Paycheck notifications are triggered **only for newly detected posted deposits**, never for historical backfill or pending transactions. Bank notifications have **quiet hours of 10 PM–8 AM** and a default limit of **two routine bank alerts per day**, with an exception for newly posted matching paychecks; the lock screen hides amounts unless you enable them. Turning off bank alerts does not disconnect your bank.
 
 Web Push provider acceptance means a notification was accepted for delivery, **not guaranteed displayed**. iPhone Web Push requires an installed Home Screen PWA with permission. Real bank posting and Plaid's transaction availability can be delayed. LifeOS checks its Plaid webhook as new data becomes available and also has an approximately four-hour scheduled fallback; neither can force immediate posting.
 
