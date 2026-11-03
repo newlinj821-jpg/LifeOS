@@ -80,7 +80,7 @@ export function incomeStats(items){
 export function publicBank(vault){
  const items=(vault.items||[]).map(x=>({id:x.id,institution:x.institution,
    accounts:(x.accounts||[]),lastSynced:x.lastSynced||null,error:x.error||null}));
- const transactions=(vault.items||[]).flatMap(item=>(item.transactions||[]).map(t=>({...t,institution:item.institution})))
+ const transactions=(vault.items||[]).flatMap(item=>(item.transactions||[]).map(t=>({...t,institution:item.institution,vaBenefit:vaDeposit(t)})))
    .sort((a,b)=>b.date.localeCompare(a.date)).slice(0,150);
  const stats=incomeStats(vault.items||[]);
  return {connected:items.length>0,items,transactions,stats,prefs:vault.prefs||blankVault().prefs,
