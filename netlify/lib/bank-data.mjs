@@ -88,6 +88,7 @@ export const isVAIncome=t=>isDeposit(t)&&(
 );
 export const defaultBankPrefs=()=>({enabled:false,paycheck:true,otherDeposits:false,largeExpense:false,
  largeExpenseAmount:300,lowBalance:false,lowBalanceAmount:100,showAmounts:false,
+ expectedPaycheckAmount:null,
  paycheckMatches:[],quietStart:'22:00',quietEnd:'08:00',maxDaily:2});
 export function bankPrefs(value){
  const x=value&&typeof value==='object'?value:{},defaults=defaultBankPrefs();
@@ -97,14 +98,19 @@ export function bankPrefs(value){
   otherDeposits:x.otherDeposits===true,largeExpense:x.largeExpense===true,
   largeExpenseAmount:money(x.largeExpenseAmount,300),lowBalance:x.lowBalance===true,
   lowBalanceAmount:money(x.lowBalanceAmount,100),showAmounts:x.showAmounts===true,
+  expectedPaycheckAmount:x.expectedPaycheckAmount===null||x.expectedPaycheckAmount===''||x.expectedPaycheckAmount===undefined?null:money(x.expectedPaycheckAmount,null),
   maxDaily:Math.max(1,Math.min(3,Math.trunc(+x.maxDaily||2))),
   quietStart:time(x.quietStart,'22:00'),quietEnd:time(x.quietEnd,'08:00'),
   paycheckMatches:Array.isArray(x.paycheckMatches)?x.paycheckMatches.filter(v=>typeof v==='string'&&v.trim().length>=3&&v.length<=45).map(v=>v.trim().toUpperCase()).slice(0,8):[]};
 }
 export function isPaycheck(t,config={}){
  if(!isDeposit(t))return false;
+ const p=bankPrefs(config);
+ // Exact cents matter: a larger VA credit or payroll payment is an ordinary
+ // deposit, never an unexpected paycheck notification.
+ if(p.expectedPaycheckAmount===null||Math.round(Math.abs(t.amount)*100)!==Math.round(p.expectedPaycheckAmount*100))return false;
+ const label=incomeDescriptor(t);
  if(isVAIncome(t))return true;
- const p=bankPrefs(config),label=incomeDescriptor(t);
  if(p.paycheckMatches.some(v=>label.includes(v)))return true;
  return /^INCOME_WAGES\b/.test(t.category||'')||/\bPAYROLL\b/.test(label);
 }
