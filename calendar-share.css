@@ -37,3 +37,7 @@
  .calendar-share-actions button{font-size:12px;min-height:44px}
  .calendar-share-actions button:last-child:nth-child(3){grid-column:1/-1}
 }
+
+.calendar-share-tools{border-top:1px solid var(--line);margin-top:13px;padding-top:13px;display:flex;gap:8px;flex-wrap:wrap}
+.calendar-share-tools button{min-height:43px}
+@media(max-width:520px){.calendar-share-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.calendar-share-tools:has(button:only-child){grid-template-columns:1fr}.calendar-share-tools button{font-size:12px}}
