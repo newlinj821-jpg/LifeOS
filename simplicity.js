@@ -17,6 +17,12 @@
     event:'What is the event?',habit:'Which routine?'
   };
   const logged=new Set(['meal','workout','note']);
+  const starterRules=[
+    {id:'hydration',trigger:'workout',title:'Drink water after your workout',delay:10,explain:'A hydration reminder 10 minutes after you finish a workout.'},
+    {id:'post-meal',trigger:'meal',title:'Take a short walk or stretch',delay:20,explain:'A gentle follow-up 20 minutes after logging a meal.'},
+    {id:'pet-water',trigger:'pet',title:'Check the pet water bowls',delay:60,explain:'A follow-up an hour after completing pet care.'}
+  ];
+  let showCustomAutomation=false;
   const dataSettings=db.settings;
   if(!dataSettings.mode)dataSettings.mode='simple';
   if(!Array.isArray(dataSettings.focusModules))dataSettings.focusModules=['fitness','food','money'];
@@ -58,6 +64,26 @@
       const oldSection=[...document.querySelectorAll('#view section')].find(x=>x.querySelector('h2')?.textContent==='Show or hide modules');
       if(oldSection)oldSection.hidden=true;
     }
+  };
+  const originalAutomationPage=lifeAutomationPage;
+  lifeAutomationPage=function(){
+    if(currentMode()==='advanced'||showCustomAutomation)return originalAutomationPage();
+    const rules=db.automations||[];
+    const templates=starterRules.map(r=>{
+      const already=rules.some(x=>x.trigger===r.trigger&&x.title===r.title&&x.delay===r.delay);
+      return '<div class="simple-rule-template"><div><strong>'+safe(r.title)+'</strong><p>'+safe(r.explain)+'</p></div>'+
+        '<button class="outline-btn" data-life-template="'+r.id+'" '+(already?'disabled':'')+'>'+(already?'Added':'Use template')+'</button></div>';
+    }).join('');
+    const saved=rules.length?rules.map(r=>
+      '<div class="simple-reminder-row"><span class="simple-reminder-symbol">⚡</span><span class="simple-reminder-text"><strong>'+safe(r.title)+'</strong>'+
+      '<small>After '+safe(KIND[r.trigger]?.label||r.trigger)+' · '+r.delay+' minutes</small></span>'+
+      '<button class="ghost-btn" data-action="life-rule-remove:'+safe(r.id)+'">Remove</button></div>'
+    ).join(''):'<p class="simple-list-placeholder">No automations enabled.</p>';
+    return header('Easy automations','Useful follow-ups without complicated setup.')+
+      '<div class="simple-content-grid"><section class="panel panel-pad"><h2>Ready-made rules</h2><p class="fine" style="margin:7px 0 12px">Choose only the suggestions you want. Nothing is enabled automatically.</p>'+
+      templates+'</section><section class="panel"><div class="panel-head"><h2>Your automations</h2>'+
+      '<button class="minor" data-life-custom-rules>Build a custom rule</button></div>'+saved+'</section></div>'+
+      '<p class="fine" style="margin-top:15px">Automations run when you complete an item inside LifeOS. Their follow-up reminders can be synced for background push delivery.</p>';
   };
   const baseSettings=settingsPage;
   settingsPage=function(){
@@ -202,7 +228,7 @@
         notes:initial.notes||'',details:'',alert,leadMinutes:0,priority:'Normal',
         done:forLog&&!alert&&(!dueAt||new Date(dueAt)<=new Date()),createdAt:Date.now(),updatedAt:Date.now()
       };
-      db.items.push(item);dlg.close();save();if(alert||pushEnabled)syncReminder(item);
+      db.items.push(item);dlg.close();save();if(item.done)lifeRunRules(item);if(alert||pushEnabled)syncReminder(item);
       toast((forLog?'Logged ':'Saved ')+title+(alert?'. Notification scheduled if push is enabled.':'.'));
     });
   }
@@ -246,7 +272,7 @@
   $('#newButton').onclick=openQuickPicker;
   $('#mobileAdd').onclick=openQuickPicker;
   document.addEventListener('click',event=>{
-    const target=event.target.closest('[data-life-mini],[data-life-water],[data-life-close],[data-life-expand],[data-life-more-types],[data-life-mode],[data-life-focus],[data-life-setup],[data-life-onboard-mode],[data-life-onboard-focus],[data-life-skip],[data-life-finish]');
+    const target=event.target.closest('[data-life-mini],[data-life-water],[data-life-close],[data-life-expand],[data-life-more-types],[data-life-mode],[data-life-focus],[data-life-setup],[data-life-onboard-mode],[data-life-onboard-focus],[data-life-skip],[data-life-finish],[data-life-template],[data-life-custom-rules]');
     if(!target)return;
     if(target.hasAttribute('data-life-mini')){openMini(target.dataset.lifeMini);return;}
     if(target.hasAttribute('data-life-water')){const key=dayKey(new Date());db.water[key]=(db.water[key]||0)+1;save();toast('Water serving logged.');return;}
@@ -256,6 +282,15 @@
       $('#quickDialogContent').innerHTML='<div class="modal-top"><h2>All entry types</h2><button class="icon-btn" data-life-close="quick">×</button></div><div class="modal-content"><div class="simple-picker-grid">'+list.map(([k,v])=>
         '<button class="simple-picker-item" data-life-open-full="'+k+'"><span>'+v.icon+'</span><strong>'+safe(v.label)+'</strong></button>').join('')+'</div></div>';
       $('#quickDialog').showModal();return;}
+    if(target.hasAttribute('data-life-custom-rules')){showCustomAutomation=true;render();return;}
+    if(target.hasAttribute('data-life-template')){
+      const rule=starterRules.find(r=>r.id===target.dataset.lifeTemplate);
+      if(!rule)return;
+      db.automations=Array.isArray(db.automations)?db.automations:[];
+      if(db.automations.some(x=>x.trigger===rule.trigger&&x.title===rule.title&&x.delay===rule.delay)){toast('That template is already added.');return;}
+      db.automations.push({id:uid(),trigger:rule.trigger,title:rule.title,delay:rule.delay});
+      saveChoices();toast('Automation added: '+rule.title);return;
+    }
     if(target.hasAttribute('data-life-mode')){db.settings.mode=logic.mode(target.dataset.lifeMode);saveChoices();toast('Switched to '+db.settings.mode+' mode.');return;}
     if(target.hasAttribute('data-life-setup')){openOnboarding();return;}
     if(target.hasAttribute('data-life-onboard-mode')){onboardingMode=logic.mode(target.dataset.lifeOnboardMode);$('#lifeWelcomeDialog').innerHTML=welcomeMarkup();return;}
