@@ -120,3 +120,5 @@
 .money-shortcuts button:focus-visible{outline:2px solid var(--accent)}
 .finance-savings,.finance-entries,.finance-setup{scroll-margin-top:125px}
 @media(max-width:780px){.money-shortcuts{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.money-shortcuts button{min-height:85px}}
+
+.finance-entry-group{padding-bottom:6px}.finance-entry-group h3{font-size:12px;letter-spacing:.4px;color:var(--accent);padding:14px 16px 10px;background:var(--panel2);border-top:1px solid var(--line)}.finance-entry-group .finance-entry:first-of-type{border-top:0}
