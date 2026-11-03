@@ -1,8 +1,10 @@
 /* LifeOS private bank API. Read-only: Transactions and cached accounts by default. */
-import {json} from '../lib/core.mjs';
+import {json,digest,authorized,validSubscription} from '../lib/core.mjs';
+import {getStore} from '@netlify/blobs';
+import {updateBanks,deliverBankAlerts} from '../lib/bank-background.mjs';
 import {randomBytes} from 'node:crypto';
 import {currentEnvironment,isConfigured,verifySetupKey,newSession,storeSession,sessionValid,deleteSession,readVault,writeVault} from '../lib/bank-security.mjs';
-import {normalizeAccount,normalizeTransaction,applyTransactions} from '../lib/bank-data.mjs';
+import {normalizeAccount,normalizeTransaction,applyTransactions,bankPrefs,paycheckHistory,summarizeTransactions} from '../lib/bank-data.mjs';
 
 const base=()=>currentEnvironment()==='production'?'https://production.plaid.com':'https://sandbox.plaid.com';
 const sourceOfError=e=>({code:e?.code||'BANK_ERROR',error:e?.message||'Bank data is temporarily unavailable.'});
@@ -60,7 +62,11 @@ async function syncTransactions(record){
  return {transactions:applyTransactions(record.transactions||[],outAdd,outMod,outRemoved),cursor:next};
 }
 function visible(v){
+ const all=v.items.flatMap(i=>i.transactions||[]);
  return {environment:currentEnvironment(),updatedAt:v.updatedAt||null,connected:v.items.length,
+  bankAlerts:bankPrefs(v.bankAlerts),pushConnected:Boolean(v.pushDeviceKey),bankLastError:v.bankLastError||null,
+  lastBankNotification:v.bankLastPushAt||null,paychecks:paycheckHistory(all,v.bankAlerts),
+  thisMonth:summarizeTransactions(all,new Date().toISOString().slice(0,7)),
   accounts:v.items.flatMap(i=>(i.accounts||[]).map(a=>({...a,institution:i.institution||'Connected bank'}))),
   previousAccounts:v.items.flatMap(i=>i.previousAccounts||[]),
   transactions:v.items.flatMap(i=>i.transactions||[]).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,700),
@@ -68,7 +74,8 @@ function visible(v){
    updatedAt:i.updatedAt||null,transactionsUpdatedAt:i.transactionsUpdatedAt||null,warning:i.warning||''}))};
 }
 function safeEnv(){return {configured:isConfigured(),environment:currentEnvironment(),
- readOnly:true,sessionHours:12,needs:['PLAID_CLIENT_ID','PLAID_SECRET','PLAID_ENV','LIFEOS_BANK_SETUP_KEY','LIFEOS_BANK_ENCRYPTION_KEY']};}
+ readOnly:true,sessionHours:12,webhookConfigured:Boolean(process.env.PLAID_WEBHOOK_URL),
+ needs:['PLAID_CLIENT_ID','PLAID_SECRET','PLAID_ENV','LIFEOS_BANK_SETUP_KEY','LIFEOS_BANK_ENCRYPTION_KEY']};}
 function success(result){return json(result);}
 function sameOrigin(req){
  const origin=req.headers.get('origin');
@@ -103,10 +110,16 @@ export default async function handler(request){
   let vault=await readVault();
   if(action==='status')return success({ok:true,summary:visible(vault)});
   if(action==='link-token'){
-   const data=await callPlaid('link/token/create',{
-    user:{client_user_id:vault.ownerId},client_name:'LifeOS',products:['transactions'],
-    country_codes:['US'],language:'en'
-   });
+   const item=body.updateItemId?vault.items.find(x=>x.itemId===body.updateItemId):null;
+   if(body.updateItemId&&!item)return json({code:'NOT_FOUND',error:'Select an existing bank to reconnect.'},404);
+   const opts=item?{access_token:item.accessToken,user:{client_user_id:vault.ownerId},client_name:'LifeOS',
+     country_codes:['US'],language:'en'}:{user:{client_user_id:vault.ownerId},client_name:'LifeOS',products:['transactions'],
+     country_codes:['US'],language:'en'};
+   const webhook=process.env.PLAID_WEBHOOK_URL;
+   if(!item&&webhook&&/^https:\/\/[^?#]+$/.test(webhook))opts.webhook=webhook;
+   const redirect=process.env.PLAID_REDIRECT_URI;
+   if(redirect&&/^https:\/\/[^?#]+$/.test(redirect))opts.redirect_uri=redirect;
+   const data=await callPlaid('link/token/create',opts);
    if(typeof data.link_token!=='string')throw new PlaidError('NO_LINK_TOKEN','Plaid did not provide a link token.');
    return success({ok:true,linkToken:data.link_token,expiration:data.expiration});
   }
@@ -129,31 +142,44 @@ export default async function handler(request){
     record.updatedAt=Date.now();vault.updatedAt=Date.now();
     await writeVault(vault);
    }catch(e){record.warning='Account details are still loading. Select Refresh later.';await writeVault(vault);}
+   // Start transactions/sync so Plaid can begin sending SYNC_UPDATES_AVAILABLE events.
+   try{await updateBanks({itemId:record.itemId});vault=await readVault();}
+   catch(e){console.warn('LifeOS initial bank sync pending',String(e.code||e.message).slice(0,90));}
    return success({ok:true,summary:visible(vault)});
   }
   if(action==='refresh'){
-   const fresh=body.freshBalances===true;
-   const now=Date.now();
-   // Avoid accidental repeated real-time Balance API requests, which can be chargeable.
-   if(fresh&&vault.lastFreshBalanceAt&&now-vault.lastFreshBalanceAt<15*60_000)
-    return json({code:'BALANCE_COOLDOWN',error:'A fresh balance check was requested recently. Wait 15 minutes before trying again.'},429);
-   let updated=0;const warnings=[];
-   for(const item of vault.items){
-    try{
-     const accountData=await callPlaid(fresh?'accounts/balance/get':'accounts/get',{access_token:item.accessToken});
-     const nextAccounts=safeAccountList(accountData,item.itemId);
-     if(item.accounts.length&&nextAccounts.length)item.previousAccounts=item.accounts;
-     item.accounts=nextAccounts;item.updatedAt=Date.now();
-     try{
-      const sync=await syncTransactions(item);item.transactions=sync.transactions;item.cursor=sync.cursor;
-      item.transactionsUpdatedAt=Date.now();item.warning='';
-     }catch(e){item.warning=e.message;warnings.push(item.institution+': '+e.message);}
-     updated++;
-    }catch(e){item.warning=e.message;warnings.push(item.institution+': '+e.message);}
-   }
-   if(fresh&&updated)vault.lastFreshBalanceAt=Date.now();
-   vault.updatedAt=Date.now();await writeVault(vault);
-   return success({ok:true,updated,warnings,summary:visible(vault),freshBalances:fresh});
+   // A manual refresh uses the cached Accounts endpoint by default (not the
+   // potentially chargeable real-time Balance or Transactions Refresh add-on).
+   if(body.freshBalances===true)return json({code:'BALANCE_ADDON_DISABLED',
+     error:'Real-time balance refresh can incur Plaid charges. LifeOS uses the standard free-compatible accounts refresh instead.'},400);
+   const result=await updateBanks({});
+   await deliverBankAlerts();
+   vault=await readVault();
+   return success({ok:true,summary:visible(vault),updated:result.updated,warnings:result.warnings});
+  }
+  if(action==='notification-prefs'){
+   const input=body.prefs;
+   if(!input||typeof input!=='object')return json({code:'INVALID_PREFS',error:'Invalid notification preferences.'},400);
+   vault.bankAlerts=bankPrefs({...vault.bankAlerts,...input});
+   await writeVault(vault);
+   return success({ok:true,summary:visible(vault)});
+  }
+  if(action==='link-notifications'){
+   if(!validSubscription(body.subscription)||typeof body.manageToken!=='string')
+    return json({code:'NOT_VERIFIED',error:'Enable and verify regular LifeOS notifications before linking bank alerts.'},400);
+   const endpointHash=digest(body.subscription.endpoint),deviceKey='device-'+endpointHash;
+   const record=await getStore('lifeos-push-devices').get(deviceKey,{type:'json'});
+   if(!record||!authorized(body.manageToken,record.manageHash))
+    return json({code:'NOT_VERIFIED',error:'This phone does not have a verified LifeOS push connection. Reconnect notifications in Settings.'},403);
+   vault.pushDeviceKey=deviceKey;vault.bankAlerts=bankPrefs({...vault.bankAlerts,enabled:true});
+   await writeVault(vault);
+   return success({ok:true,summary:visible(vault)});
+  }
+  if(action==='unlink-notifications'){
+   vault.pushDeviceKey=null;vault.bankAlerts=bankPrefs({...vault.bankAlerts,enabled:false});
+   vault.alertQueue=[];
+   await writeVault(vault);
+   return success({ok:true,summary:visible(vault)});
   }
   if(action==='disconnect'){
    const id=String(body.itemId||'');
