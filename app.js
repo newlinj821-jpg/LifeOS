@@ -45,7 +45,7 @@ function save(){try{localStorage.setItem(STORE,JSON.stringify(db));}catch(e){toa
 function safe(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function dayKey(d){const z=new Date(d);return Number.isNaN(+z)?'':z.getFullYear()+'-'+String(z.getMonth()+1).padStart(2,'0')+'-'+String(z.getDate()).padStart(2,'0');}
 function localDateTime(d){const a=new Date(d);return dayKey(a)+'T'+String(a.getHours()).padStart(2,'0')+':'+String(a.getMinutes()).padStart(2,'0');}
-function dateLabel(v,opt={}){if(!v)return 'No date';const d=new Date(v);return isNaN(+d)?'Unknown date':new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric',...opt}).format(d);}
+function dateLabel(v,opt={}){if(!v)return 'No date';const d=typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)?new Date(v+'T12:00:00'):new Date(v);return isNaN(+d)?'Unknown date':new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric',...opt}).format(d);}
 function timeLabel(v){if(!v)return 'Any time';const d=new Date(v);return isNaN(+d)?'':new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit'}).format(d);}
 function money(n){return new Intl.NumberFormat(undefined,{style:'currency',currency:'USD',maximumFractionDigits:2}).format(Number(n)||0);}
 function uid(){return typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():'item-'+Date.now()+'-'+Math.random().toString(36).slice(2);}
