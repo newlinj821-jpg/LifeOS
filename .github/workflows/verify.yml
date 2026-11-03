@@ -22,6 +22,12 @@ jobs:
           node --check knowledge-core.mjs
           node --check knowledge-ui.mjs
           node --check netlify/functions/knowledge.mjs
+          node --check calendar-share.js
+          node --check calendar-core.mjs
+          node --check install.js
+          node --check netlify/lib/calendar.mjs
+          node --check netlify/functions/calendar-share.mjs
+          node --check scripts/generate-icons.mjs
           node --check sw.js
           node --check netlify/lib/core.mjs
           node --check netlify/functions/push.mjs
@@ -46,6 +52,16 @@ jobs:
           test -f dist/knowledge-core.mjs
           test -f dist/knowledge-ui.mjs
           test -f dist/knowledge.css
+          test -f dist/mobile.css
+          test -f dist/app-mobile.css
+          test -f dist/calendar-share.css
+          test -f dist/calendar-share.js
+          test -f dist/calendar-core.mjs
+          test -f dist/install.js
+          test -f dist/icon-192.png
+          test -f dist/icon-512.png
+          test -f dist/icon-maskable-512.png
+          test -f dist/apple-touch-icon.png
           test -f dist/sw.js
           test -f dist/calendar-share.js
           test -f dist/calendar-share.css
