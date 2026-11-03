@@ -264,4 +264,7 @@
   else if(el.dataset.bank==='unpair')await run('unlink-notifications');
   else if(el.dataset.bank==='lock'){try{await api('lock');}catch{}state.session='';state.summary=null;sessionStorage.removeItem('lifeos.bankSession');redraw();}
  });
+ // On a direct #money launch, app.js renders before finance/bank wrappers load.
+ // Repaint once after the full stack has registered; do not depend on a later API refresh.
+ if(currentPage==='money')render();
 })();
