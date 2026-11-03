@@ -18,6 +18,28 @@
   }
   return response;
  }
+ function stableSummary(previous,next,action='status'){
+  if(!next||!previous||action==='disconnect')return next;
+  // A failed or partial bank response must not erase values already shown
+  // in this session; do not persist any banking data in localStorage.
+  if((next.connected||0)===0&&(previous.connected||0)>0)
+   return {...previous,accounts:(previous.accounts||[]).map(a=>({...a,stale:true}))};
+  const old=new Map((previous.accounts||[]).map(a=>[a.id,a]));
+  const arrived=Array.isArray(next.accounts)?next.accounts:[];
+  const merged=arrived.map(a=>{
+   const prior=old.get(a.id);
+   if(!prior)return a;
+   const finite=n=>typeof n==='number'&&Number.isFinite(n);
+   const retained=!finite(a.current)&&finite(prior.current);
+   const result={...a,current:retained?prior.current:a.current,
+    available:!finite(a.available)&&finite(prior.available)?prior.available:a.available,
+    stale:a.stale===true||retained};
+   if(retained)result.lastReportedAt=prior.lastReportedAt||null;
+   return result;
+  });
+  for(const [id,a] of old)if(!arrived.some(x=>x.id===id))merged.push({...a,stale:true});
+  return {...next,accounts:merged};
+ }
  function cashflow(){
   const income=state.summary?.paychecks||{},latest=income.latest,month=state.summary?.thisMonth||{};
   return '<div class="bank-income-grid">'+
@@ -101,6 +123,10 @@
   let contents='';
   if(!state.config?.configured)contents='<h2>Bank connection</h2><p class="fine">Plaid is not configured in Netlify yet. Manual finances continue to work.</p>'+
    '<a href="https://github.com/newlinj821-jpg/LifeOS/blob/main/docs/PLAID_SETUP.md" target="_blank" rel="noopener">How to connect Plaid</a>';
+  else if(state.session&&!state.summary)contents='<h2>Bank data temporarily unavailable</h2>'+
+   '<p class="fine">LifeOS is still connected. The bank status request could not finish, but your connection and manual finances are unchanged.</p>'+
+   '<div class="bank-actions"><button class="primary-btn" type="button" data-bank="retry">Retry loading balances</button>'+
+   '<button class="ghost-btn" type="button" data-bank="lock">Lock bank view</button></div>';
   else if(!state.session||!state.summary)contents='<h2>Unlock your bank connection</h2>'+
    '<p class="fine">Enter your private LifeOS banking access key from Netlify, not your bank password or Plaid secret.</p>'+
    '<form id="lifeBankUnlock" autocomplete="off"><label for="lifeBankKey">Bank access key</label>'+
@@ -146,7 +172,7 @@
   try{
    state.config=await api('config',{},'');
    state.ready=true;
-   if(state.session){try{const x=await api('status');state.summary=x.summary;}catch{state.session='';sessionStorage.removeItem('lifeos.bankSession');}}
+   if(state.session){try{const x=await api('status');state.summary=stableSummary(state.summary,x.summary,'status');}catch(e){state.message=e.code==='BANK_LOCKED'?'Bank session expired; unlock again.':'Could not load bank data. Your connection is still saved. Retry loading balances.';}}
   }catch(e){state.ready=true;state.message=e.message;}
   finally{inFlight=false;redraw();if(new URLSearchParams(location.search).has('oauth_state_id'))resumeOAuth();}
  }
@@ -155,11 +181,15 @@
   state.busy=true;state.message='';redraw();
   try{
    const response=await api(action,data);
-   if(response.summary)state.summary=response.summary;
-   if(action==='refresh')toast('Bank sync requested. Showing the latest available posted transactions.');
+   if(response.summary)state.summary=stableSummary(state.summary,response.summary,action);
+   if(action==='refresh'){
+    if(response.warnings?.length)state.message='Some bank data could not refresh. Your last reported balances remain visible; see Manage for connection warnings.';
+    else toast('Bank update complete. Balances are last reported by Plaid, not real-time.');
+   }
    if(action==='link-notifications')toast('Bank notifications connected to this verified phone.');
    if(action==='unlink-notifications')toast('Bank notifications turned off.');
-  }catch(e){state.message=e.message||'Unable to complete bank action.';}
+   return true;
+  }catch(e){state.message=e.message||'Unable to complete bank action.';return false;}
   finally{state.busy=false;redraw();}
  }
  let linkLoading,oauthRunning=false;
@@ -282,6 +312,7 @@
   if(el.dataset.bank==='connect')await link();
   else if(el.dataset.bank==='connect-web')await link('',true);
   else if(el.dataset.bank==='refresh')await run('refresh');
+  else if(el.dataset.bank==='retry')await run('status');
   else if(el.dataset.bank==='pair')await pair();
   else if(el.dataset.bank==='unpair')await run('unlink-notifications');
   else if(el.dataset.bank==='lock'){try{await api('lock');}catch{}state.session='';state.summary=null;sessionStorage.removeItem('lifeos.bankSession');redraw();}
