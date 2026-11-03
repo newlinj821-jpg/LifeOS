@@ -1,0 +1,53 @@
+/* LifeOS Bank: clear read-only UI, no bank data in offline public shell. */
+.bank-panel{margin:15px 0 8px;min-width:0;border:1px solid rgba(151,132,206,.4);border-radius:17px;background:var(--panel)}
+.bank-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.bank-section-head h2{font-size:19px;margin:5px 0 8px}
+.bank-status{font-size:10px;font-weight:730;text-transform:uppercase;letter-spacing:.04em;background:rgba(156,132,243,.13);border:1px solid rgba(155,130,241,.3);padding:8px 9px;border-radius:9px;color:var(--accent);white-space:nowrap}
+.bank-panel .fine{font-size:11px;line-height:1.6;color:var(--muted)}
+.bank-panel a{font-size:12px;color:var(--accent)}
+.bank-hint{font-size:11px;color:var(--muted);line-height:1.55;margin:11px 0 16px}
+#lifeBankUnlock{display:grid;gap:11px;max-width:460px;margin-top:18px}
+#lifeBankUnlock>label{font-size:12px;font-weight:650}
+#lifeBankUnlock input{font-size:16px;min-height:46px}
+#lifeBankUnlock button{min-height:45px}
+.bank-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:15px 0}
+.bank-actions button{min-height:42px}
+.bank-tabs{display:flex;gap:6px;overflow-x:auto;padding:6px 0 13px;scrollbar-width:thin}
+.bank-tabs button{min-height:39px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--muted);padding:9px 13px;font-size:11px;font-weight:680;white-space:nowrap}
+.bank-tabs button.active{color:#cfbaff;border-color:#a58cf4;background:rgba(165,137,241,.13)}
+.bank-accounts,.bank-transactions,.bank-institutions{border:1px solid var(--line);border-radius:13px;overflow:hidden}
+.bank-account,.bank-transaction,.bank-institution{display:flex;gap:12px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);padding:12px 14px;min-width:0}
+.bank-account:last-child,.bank-transaction:last-child,.bank-institution:last-child{border-bottom:0}
+.bank-account>span,.bank-transaction>span,.bank-institution>span{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}
+.bank-account strong,.bank-transaction strong,.bank-institution strong{font-size:12px;overflow-wrap:anywhere}
+.bank-account small,.bank-transaction small,.bank-institution small{font-size:10px;color:var(--muted);line-height:1.4}
+.bank-account>strong,.bank-transaction>strong{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;flex-shrink:0}
+.bank-credit{color:var(--good)}
+.bank-income-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:6px 0 15px}
+.bank-income-grid>div{border-radius:12px;border:1px solid var(--line);padding:14px;display:flex;flex-direction:column;gap:8px;background:var(--panel2);min-width:0}
+.bank-income-grid span{font-size:11px;color:var(--muted)}
+.bank-income-grid strong{font-size:19px;font-weight:740;font-variant-numeric:tabular-nums;line-height:1.2}
+.bank-income-grid small{font-size:10px;color:var(--muted);line-height:1.45}
+.bank-institutions{margin-top:14px}
+.bank-institution{justify-content:initial;flex-wrap:wrap}
+.bank-institution button{min-height:35px}
+.bank-institution .danger-btn{color:#d59ca0}
+.bank-pref-form{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+.bank-pref-intro h3{font-size:14px;margin-bottom:7px}
+.bank-pref-form>label{display:flex;align-items:center;gap:11px;font-size:12px;min-height:36px;padding:6px 0;cursor:pointer}
+.bank-pref-form input[type=checkbox]{accent-color:#ae90fa;min-height:19px;min-width:19px}
+.bank-small-field{display:flex;flex-direction:column;gap:6px;margin:4px 0 9px}
+.bank-small-field label{font-size:11px;color:var(--muted)}
+.bank-small-field input{min-height:42px;max-width:340px;font-size:16px}
+.bank-small-field small{font-size:10px;color:var(--muted)}
+.bank-pref-form>button{align-self:start;min-height:42px}
+.bank-alert-state{padding:14px;background:rgba(162,135,241,.09);border:1px solid var(--line);border-radius:12px}
+.bank-alert-state strong{font-size:12px}
+.bank-alert-state p{margin:7px 0 12px}
+.bank-error{background:rgba(209,103,117,.1);border:1px solid #b36a78;color:#f2c1c4;border-radius:10px;padding:11px;font-size:11px;line-height:1.5;margin:10px 0}
+.bank-footnote{border-top:1px solid var(--line);padding-top:13px;margin-top:16px}
+:root[data-theme="light"] .bank-panel{background:#fff;border-color:#d7cbe9}
+:root[data-theme="light"] .bank-tabs button.active{color:#6145a1;background:#f0ebfc}
+:root[data-theme="light"] .bank-error{color:#913c49}
+@media(max-width:870px){.bank-income-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.bank-section-head{gap:7px}.bank-income-grid{grid-template-columns:1fr}.bank-actions{display:grid;grid-template-columns:1fr 1fr}.bank-actions button:first-child{grid-column:1/-1}.bank-institution{gap:8px}.bank-institution>span{flex-basis:100%}.bank-account,.bank-transaction{padding:12px 10px}.bank-account>strong,.bank-transaction>strong{font-size:11px}.bank-status{font-size:9px}}
