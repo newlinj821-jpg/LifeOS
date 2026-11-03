@@ -12,7 +12,9 @@ export function cleanCalendarEvents(input){
   if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a||b-a>7*DAY_MS)continue;
   const valid=s=>typeof s==='string'?s.slice(0,180).replace(/[\u0000-\u001f\u007f]/g,' ').trim():'';
   const title=valid(x.title)||'Busy',location=valid(x.location||'');
-  seen.add(x.uid);out.push({uid:x.uid,start:new Date(a).toISOString(),end:new Date(b).toISOString(),title,location});
+  const allDay=x.allDay===true&&typeof x.day==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(x.day)&&Number.isFinite(Date.parse(x.day+'T12:00:00Z'));
+  const day=allDay?x.day:'';
+  seen.add(x.uid);out.push({uid:x.uid,start:new Date(a).toISOString(),end:new Date(b).toISOString(),title,location,allDay,day});
   if(out.length>=750)break;
  }
  return out.sort((a,b)=>a.start.localeCompare(b.start));
@@ -40,8 +42,10 @@ export function generateICS(events,{name='LifeOS Calendar',calendarId='lifeos',u
  ];
  for(const e of cleanCalendarEvents(events)){
   const uid=e.uid+'@calendar.lifeos.local';
-  lines.push('BEGIN:VEVENT','UID:'+uid,'DTSTAMP:'+stamp(updatedAt),
-   'DTSTART:'+stamp(e.start),'DTEND:'+stamp(e.end),
+  const startLine=e.allDay?'DTSTART;VALUE=DATE:'+e.day.replaceAll('-',''):'DTSTART:'+stamp(e.start);
+  const nextDay=e.allDay?new Date(Date.parse(e.day+'T00:00:00Z')+86400000).toISOString().slice(0,10).replaceAll('-',''):'';
+  const endLine=e.allDay?'DTEND;VALUE=DATE:'+nextDay:'DTEND:'+stamp(e.end);
+  lines.push('BEGIN:VEVENT','UID:'+uid,'DTSTAMP:'+stamp(updatedAt),startLine,endLine,
    'SUMMARY:'+escapeICSText(e.title));
   if(e.location)lines.push('LOCATION:'+escapeICSText(e.location));
   lines.push('STATUS:CONFIRMED','TRANSP:OPAQUE','END:VEVENT');
