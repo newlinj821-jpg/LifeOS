@@ -52,7 +52,7 @@
   }else if(x.type==='exercise'){
     item={...item,kind:'workout',duration:30,category:x.category||'Other',details:'Exercise reference: '+sourceNotes,done:false};
   }else if(x.type==='holiday'){
-    item={...item,kind:'event',dueAt:x.date+'T09:00',location:'',notes:'All-day calendar reference; 9 AM is a display placeholder, not an event time. '+sourceNotes};
+    item={...item,kind:'event',dueAt:x.date+'T09:00',allDay:true,location:'',notes:'All-day calendar reference; 9 AM is a display placeholder, not an event time. '+sourceNotes};
   }else{
     const permitted=['task','habit','workout','meal','pet','bill','chore','event','project','checkin','reminder'];
     item={...item,kind:permitted.includes(x.kind)?x.kind:'task',repeat:x.repeat||'none',
