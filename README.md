@@ -24,6 +24,23 @@ The Today screen has quick shortcuts for tasks, meals, workouts, reminders and w
 
 LifeOS is a static Progressive Web App with Netlify Functions. `npm run build` writes the deployment-ready website to `dist/`, including all experience-mode scripts and styles. The checked-in Netlify configuration publishes that directory, and GitHub Actions checks the build and unit tests after changes.
 
+## Public Reference Library and offline database
+
+LifeOS now includes a searchable **Reference Library** for:
+
+- **USDA FoodData Central:** real nutrition lookup with user-selected gram portions and source-linked entries
+- **wger:** public exercise records with descriptions, equipment and muscle groups when supplied
+- **Nager.Date:** holiday lookup by country and year, with calendar import
+- **51 original offline LifeOS templates:** tasks and routines for everyday household, planning, pets, finances, movement, travel, and more
+
+The app retains source labels and timestamps. Selected public references can be saved in **IndexedDB**, searched offline, and exported/restored separately from personal LifeOS data. The original personal database remains local-first; the public-reference backend does **not** synchronize accounts or upload private life records.
+
+Open **All modules → Reference Library**, or use the reference-search shortcut in Food or Fitness. You can make the library a favorite area in Settings. Use the result action to explicitly add a food log, workout plan, calendar item or reusable task.
+
+**Food lookup works with the built-in USDA demo key only at limited volume.** For sustained use, obtain your own free USDA FoodData Central API key and set `FDC_API_KEY` in LifeOS Netlify environment variables. This is not a subscription and no key is exposed to browsers. Exercise and holiday search require no user key.
+
+Read the source, license, privacy, caching, and verification details in [Reference Database](docs/REFERENCE_DATABASE.md).
+
 ## Deploy via Netlify
 
 1. Open Netlify > Add new project > Import an existing project > GitHub.
@@ -69,7 +86,7 @@ The application contains no advertisements or analytics tracking. It is not an e
 
 ## Developer notes
 
-The front end is index.html, app.js, enhancements.js, mode-core.js, simplicity.js, styles.css and simplicity.css, with sw.js, manifest.webmanifest, and icon.svg for PWA installation. Push service functions are in netlify/functions and shared logic in netlify/lib. The repository includes automated syntax checks and unit tests for reminder time calculations and notification wording.
+The front end includes index.html, app.js, enhancements.js, mode-core.js, simplicity.js, knowledge-bridge.js, reference-db.js, knowledge-core.mjs, knowledge-ui.mjs, styles.css, simplicity.css and knowledge.css, with sw.js, manifest.webmanifest, and icon.svg for PWA installation. Push service functions are in netlify/functions and shared logic in netlify/lib. The repository includes automated syntax checks and unit tests for reminder time calculations and notification wording.
 
 Run: npm run build\nRun: npm run check\nRun: npm test
 
