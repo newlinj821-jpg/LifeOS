@@ -34,6 +34,12 @@ jobs:
           node --check netlify/lib/core.mjs
           node --check netlify/lib/push-recovery.mjs
           node --check netlify/functions/push.mjs
+          node --check bank-ui.js
+          node --check netlify/lib/bank-data.mjs
+          node --check netlify/lib/bank-background.mjs
+          node --check netlify/functions/plaid.mjs
+          node --check netlify/functions/plaid-webhook.mjs
+          node --check netlify/functions/check-banks.mjs
           node --check netlify/functions/check-reminders.mjs
           node --check calendar-share.js
           node --check calendar-core.mjs
@@ -49,6 +55,8 @@ jobs:
           test -f dist/finance-core.js
           test -f dist/finance-ui.js
           test -f dist/finance.css
+          test -f dist/bank.css
+          test -f dist/bank-ui.js
           test -f dist/enhancements.js
           test -f dist/mode-core.js
           test -f dist/simplicity.js
