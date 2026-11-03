@@ -1,5 +1,5 @@
 /* LifeOS — local-first personal operating system */
-const STORE='lifeos.data.v1', SESSION_STORE='lifeos.auth.v1';
+const STORE='lifeos.data.v1', SESSION_STORE='lifeos.auth.v1', PUSH_TOKEN='lifeos.push.manageToken';
 const META={
  today:{label:'Today',icon:'⌂',group:'CORE',desc:'Your personal command center.'},
  planner:{label:'Planner',icon:'☑',group:'CORE',desc:'Tasks, priorities and everything coming up.'},
@@ -38,7 +38,7 @@ const KIND={
 const SECTION_KINDS={planner:['task'],calendar:['event'],routines:['habit'],fitness:['workout'],food:['meal'],money:['bill'],home:['chore'],pets:['pet'],wellness:['checkin'],projects:['project'],goals:['goal'],vault:['note'],journal:['journal'],reminders:['reminder']};
 const $=sel=>document.querySelector(sel);
 let currentPage='today', filter='all', keyword='', selectedDay=dayKey(new Date()), calendarCursor=new Date(), config={}, session=null, pushEnabled=false, toastHandle=0, pendingSync=false;
-const defaults=()=>({version:1,items:[],water:{},settings:{name:'',theme:'dark',budget:0,lowEnergy:false,hidden:[],dailyWater:8},fired:{},createdAt:Date.now()});
+const defaults=()=>({version:1,items:[],water:{},settings:{name:'',theme:'dark',budget:0,lowEnergy:false,hidden:[],dailyWater:8,privatePush:false,quietEnabled:false,quietStart:'22:00',quietEnd:'07:00'},fired:{},createdAt:Date.now()});
 function load(){try{const obj=JSON.parse(localStorage.getItem(STORE));if(obj&&Array.isArray(obj.items))return {...defaults(),...obj,settings:{...defaults().settings,...obj.settings}};}catch(e){}return defaults();}
 let db=load();
 function save(){try{localStorage.setItem(STORE,JSON.stringify(db));}catch(e){toast('Storage is full. Export a backup and clear unused records.');}render();}
@@ -151,7 +151,7 @@ function reminderPage(){
  const itemsHtml=scheduled.map(x=>'<article class="feature-card"><div class="feature-card-head"><div class="feature-icon">♧</div><span class="tag purple">'+safe(x.repeat==='none'?'One-time':x.repeat||'One-time')+'</span></div><h3>'+safe(buildNotification(x).title)+'</h3><p>'+safe(buildNotification(x).body)+'</p><div class="feature-bottom"><span class="pill">'+dateLabel(x.next)+' · '+timeLabel(x.next)+'</span><button class="entry-action" data-edit="'+safe(x.id)+'">›</button></div></article>').join('');
  return header('Reminders','A useful notification should tell you what, when and why—not just beep.',newBtn('reminder','＋ New reminder'))+
  '<div class="metrics">'+metric('♧',scheduled.length,'Scheduled prompts')+metric('↻',scheduled.filter(x=>isRepeat(x)).length,'Recurring')+metric('◷',scheduled.filter(x=>(+x.leadMinutes||0)>0).length,'Advance alerts')+metric(pushEnabled?'✓':'○',pushEnabled?'On':'Off','Background push')+'</div>'+
- '<div class="status '+(pushEnabled?'good':'warn')+'" style="margin-bottom:17px">'+(pushEnabled?'Push is enabled on this device. Your scheduled reminders are synced to the notification server.':'Background push is not active yet. Open Settings → Notifications to connect your account, install the app, and enable delivery even when LifeOS is closed.')+'</div>'+
+ '<div class="status '+(pushEnabled?'good':'warn')+'" style="margin-bottom:17px">'+(pushEnabled?'Push is enabled on this device. Your scheduled reminders are synced to the notification server.':'Background push is not active yet. Open Settings → Notifications, install the app, and enable delivery even when LifeOS is closed.')+'</div>'+
  '<div class="list-tools">'+btn('Configure push notifications','go-notifications')+btn('Send a test notification','test-notification')+'</div>'+
  '<div class="card-list">'+(scheduled.length?itemsHtml:empty('No scheduled reminders','Create an alert here, or attach a notification to any task, workout, meal, bill, event or pet-care entry.','reminder'))+'</div>';
 }
@@ -171,17 +171,15 @@ function insightsPage(){
 }
 function settingsPage(){
  const s=db.settings,modules=Object.entries(META).filter(([k])=>!['today','settings'].includes(k));
- const configured=!!(config.supabaseUrl&&config.supabaseAnonKey&&config.vapidPublicKey);
- const authenticated=!!session?.access_token;
- const status=pushEnabled?'Background push connected on this device.':!configured?'The notification server is not configured. Add the Supabase and VAPID environment variables in Netlify.':!authenticated?'Sign in to link reminders to your account.':'Sign in complete. Enable push from your installed app.';
+ const configured=!!config.vapidPublicKey;
+ const status=pushEnabled?'Background push is connected to this device.':configured?'Push server is configured. Enable notifications on this device.':(config.pushError||'Push server needs three VAPID environment variables in Netlify, followed by a redeploy.');
  const moduleLines=modules.map(([k,v])=>'<label class="toggle-line"><div><strong>'+v.icon+' '+v.label+'</strong><p>'+safe(v.desc)+'</p></div><input class="toggle" type="checkbox" data-module="'+k+'" '+(!s.hidden.includes(k)?'checked':'')+'></label>').join('');
- return header('Settings','Your personal preferences, data controls and notification setup.')+
- '<div class="settings-grid"><section class="panel panel-pad"><h2>Personalize LifeOS</h2><p class="fine" style="margin:7px 0 14px">Use a name, choose a color theme and set a monthly budget for the Money dashboard.</p><div class="modal-grid"><div class="form-group"><label for="settingName">Display name</label><input id="settingName" class="field" maxlength="45" value="'+safe(s.name)+'" placeholder="What should LifeOS call you?"></div><div class="form-group"><label for="settingTheme">Appearance</label><select id="settingTheme" class="field"><option value="dark" '+(s.theme==='dark'?'selected':'')+'>Midnight dark</option><option value="light" '+(s.theme==='light'?'selected':'')+'>Daylight light</option></select></div><div class="form-group"><label for="settingBudget">Monthly budget ($)</label><input id="settingBudget" class="field" type="number" min="0" step=".01" value="'+(s.budget||0)+'"></div><div class="form-group"><label for="settingWater">Water target (servings)</label><input id="settingWater" class="field" type="number" min="1" max="30" value="'+(s.dailyWater||8)+'"></div></div><div class="button-row">'+btn('Save preferences','save-settings')+'</div><div class="hr"></div><label class="toggle-line"><div><strong>Low-energy mode</strong><p>Offer a smaller, more forgiving daily focus.</p></div><input type="checkbox" class="toggle" data-setting="lowEnergy" '+(s.lowEnergy?'checked':'')+'></label></section>'+
- '<section class="panel panel-pad" id="notificationSettings"><h2>Push notifications</h2><p class="fine" style="margin:7px 0 12px">Reliable background alerts require a secure site, account, installed web app, and notification permission. Reminder times follow your device timezone.</p><div class="status '+(pushEnabled?'good':configured?'':'warn')+'">'+safe(status)+'</div><div class="detail-lines" style="margin:15px 0"><div><strong>Server setup:</strong> '+(configured?'Available':'Required')+'</div><div><strong>Account:</strong> '+(authenticated?'Signed in':'Not signed in')+'</div><div><strong>Device:</strong> '+(pushEnabled?'Subscribed':'Not subscribed')+'</div><div><strong>Timezone:</strong> '+safe(Intl.DateTimeFormat().resolvedOptions().timeZone)+'</div></div>'+
- '<div class="button-row">'+btn(pushEnabled?'Refresh push subscription':'Enable background push','enable-push','primary-btn')+btn('Send test','test-notification')+btn('Sync reminders','sync-all')+'</div><div class="hr"></div><p class="fine"><strong>On iPhone:</strong> Open the site in Safari → Share → Add to Home Screen → launch LifeOS from its new icon → tap Enable background push. iOS requires a Home Screen web app for web push.</p><div class="hr"></div><h3>Account for secure push</h3><p class="fine" style="margin:6px 0 10px">Your email/password is handled by Supabase Auth. Your full local life database is not uploaded; only enabled reminder details are sent to the push service.</p>'+
- (authenticated?'<div class="status good">Signed in as '+safe(session.email||'account')+'</div><div class="button-row">'+btn('Sign out','sign-out')+btn('Disable this device','disable-push','danger-btn')+'</div>':'<form id="authForm" class="modal-grid" style="margin-top:12px"><div class="form-group full"><label>Email</label><input name="email" class="field" type="email" required autocomplete="email" placeholder="you@example.com"></div><div class="form-group full"><label>Password (8+ characters)</label><input name="password" class="field" type="password" minlength="8" autocomplete="current-password" required></div><div class="form-group full"><div class="button-row"><button class="primary-btn" type="submit" name="mode" value="sign-in">Sign in</button><button class="outline-btn" type="submit" name="mode" value="sign-up">Create account</button></div></div></form>')+
- '</section><section class="panel panel-pad"><h2>Show or hide modules</h2><p class="fine" style="margin:7px 0 14px">Personalize your navigation. Hidden sections retain their information.</p>'+moduleLines+'</section>'+
- '<section class="panel panel-pad"><h2>Your data & backups</h2><p class="fine" style="margin:7px 0 14px">All personal entries are stored locally in this browser. Back them up before clearing browser data or changing devices. Exported files contain sensitive information; keep them somewhere private.</p><div class="button-row">'+btn('Export complete backup','export-data','primary-btn')+'<label class="outline-btn" style="display:inline-block;cursor:pointer">Import backup<input type="file" id="importFile" accept=".json,application/json" style="display:none"></label></div><div class="hr"></div><div class="danger-zone"><h3>Clear local data</h3><p class="fine" style="margin:5px 0 12px">This removes the records and preferences on this browser. It does not remove existing push schedules on the notification server. Disable push first if needed.</p>'+btn('Erase local data','clear-data','danger-btn')+'</div></section></div>';
+ return header('Settings','Your personal preferences, data controls and detailed reminder configuration.')+
+ '<div class="settings-grid"><section class="panel panel-pad"><h2>Personalize LifeOS</h2><p class="fine" style="margin:7px 0 14px">Choose a name, appearance, budget and hydration goal.</p><div class="modal-grid"><div class="form-group"><label>Display name</label><input id="settingName" class="field" maxlength="45" value="'+safe(s.name)+'" placeholder="Preferred name"></div><div class="form-group"><label>Appearance</label><select id="settingTheme" class="field"><option value="dark" '+(s.theme==='dark'?'selected':'')+'>Midnight dark</option><option value="light" '+(s.theme==='light'?'selected':'')+'>Daylight light</option></select></div><div class="form-group"><label>Monthly budget ($)</label><input id="settingBudget" class="field" type="number" min="0" step=".01" value="'+(s.budget||0)+'"></div><div class="form-group"><label>Daily water target (servings)</label><input id="settingWater" class="field" type="number" min="1" max="30" value="'+(s.dailyWater||8)+'"></div></div><div class="button-row">'+btn('Save preferences','save-settings')+'</div><div class="hr"></div><label class="toggle-line"><div><strong>Low-energy mode</strong><p>Use a smaller and more forgiving daily focus.</p></div><input type="checkbox" class="toggle" data-setting="lowEnergy" '+(s.lowEnergy?'checked':'')+'></label></section>'+
+ '<section class="panel panel-pad" id="notificationSettings"><h2>Background push notifications</h2><p class="fine" style="margin:7px 0 12px">Works like Stormline: install the app, grant notification permission, and allow the Netlify scheduler to check due reminders even while LifeOS is closed. Delivery is approximate, never guaranteed to the exact minute.</p><div class="status '+(pushEnabled?'good':configured?'':'warn')+'">'+safe(status)+'</div><div class="detail-lines" style="margin:15px 0"><div><strong>Server:</strong> '+(configured?'Configured':'Not configured')+'</div><div><strong>This device:</strong> '+(pushEnabled?'Subscribed':'Not yet subscribed')+'</div><div><strong>Sync scope:</strong> Reminder details only, not your complete LifeOS database</div><div><strong>Timezone:</strong> '+safe(Intl.DateTimeFormat().resolvedOptions().timeZone)+'</div></div>'+
+ '<div class="button-row">'+btn(pushEnabled?'Refresh reminder sync':'Enable background push','enable-push','primary-btn')+btn('Send test push','test-notification')+btn('Sync all reminders','sync-all')+btn('Repair subscription','repair-push')+btn('Disable this device','disable-push','danger-btn')+'</div><div class="hr"></div><h3>Notification privacy & quiet hours</h3><label class="toggle-line"><div><strong>Private lock-screen wording</strong><p>Hide titles and instructions in push previews. Open LifeOS to read the entry.</p></div><input class="toggle" id="privatePush" type="checkbox" '+(s.privatePush?'checked':'')+'></label><label class="toggle-line"><div><strong>Quiet hours</strong><p>Suppress normal reminders during the set window. Urgent reminders may still be sent.</p></div><input class="toggle" id="quietEnabled" type="checkbox" '+(s.quietEnabled?'checked':'')+'></label><div class="modal-grid"><div class="form-group"><label>Quiet from</label><input class="field" type="time" id="quietStart" value="'+safe(s.quietStart||'22:00')+'"></div><div class="form-group"><label>Quiet until</label><input class="field" type="time" id="quietEnd" value="'+safe(s.quietEnd||'07:00')+'"></div></div><div class="button-row">'+btn('Save notification preferences','save-settings')+'</div><div class="hr"></div><p class="fine"><strong>iPhone setup:</strong> Open LifeOS in Safari → Share → Add to Home Screen → launch it from the new icon → tap Enable background push → Allow → Send test push. Web push does not work from a normal iPhone Safari tab.</p></section>'+
+ '<section class="panel panel-pad"><h2>Show or hide modules</h2><p class="fine" style="margin:7px 0 14px">Hidden sections retain their content.</p>'+moduleLines+'</section>'+
+ '<section class="panel panel-pad"><h2>Your data & backups</h2><p class="fine" style="margin:7px 0 14px">Entries remain in this browser. Export and retain a private backup; cross-device account sync is not yet available.</p><div class="button-row">'+btn('Export full backup','export-data','primary-btn')+'<label class="outline-btn" style="display:inline-block;cursor:pointer">Import backup<input type="file" id="importFile" accept=".json,application/json" style="display:none"></label></div><div class="hr"></div><div class="danger-zone"><h3>Clear local data</h3><p class="fine" style="margin:5px 0 12px">This permanently removes local records; it does not remove cloud push schedules. Disable push first.</p>'+btn('Erase local data','clear-data','danger-btn')+'</div></section></div>';
 }
 function render(){
  document.documentElement.dataset.theme=db.settings.theme||'dark';
@@ -229,10 +227,11 @@ function action(name){
  if(name==='prev-month'||name==='next-month'||name==='today-month'){if(name==='today-month')calendarCursor=new Date();else calendarCursor=new Date(calendarCursor.getFullYear(),calendarCursor.getMonth()+(name==='next-month'?1:-1),1);render();return;}
  if(name==='focus'){const end=new Date(Date.now()+25*60000);openEntry('reminder');setTimeout(()=>{const due=$('#entry-dueAt'),title=$('#entry-title'),details=$('#entry-details');if(due&&title){due.value=localDateTime(end);title.value='Focus session finished';if(details)details.value='You have completed 25 minutes of focused work. Take a short break and choose what comes next.';}},50);return;}
  if(name==='go-notifications'){setPage('settings');requestAnimationFrame(()=>$('#notificationSettings')?.scrollIntoView({behavior:'smooth'}));return;}
- if(name==='save-settings'){db.settings.name=$('#settingName').value.trim().slice(0,45);db.settings.theme=$('#settingTheme').value;db.settings.budget=Math.max(0,+$('#settingBudget').value||0);db.settings.dailyWater=Math.min(30,Math.max(1,+$('#settingWater').value||8));save();toast('Preferences saved.');return;}
+ if(name==='save-settings'){db.settings.name=$('#settingName').value.trim().slice(0,45);db.settings.theme=$('#settingTheme').value;db.settings.budget=Math.max(0,+$('#settingBudget').value||0);db.settings.dailyWater=Math.min(30,Math.max(1,+$('#settingWater').value||8));db.settings.privatePush=!!$('#privatePush')?.checked;db.settings.quietEnabled=!!$('#quietEnabled')?.checked;db.settings.quietStart=$('#quietStart')?.value||'22:00';db.settings.quietEnd=$('#quietEnd')?.value||'07:00';save();syncAllReminders(true);toast('Preferences saved.');return;}
  if(name==='export-data'){const blob=new Blob([JSON.stringify({...db,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='LifeOS-backup-'+dayKey(new Date())+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);toast('Backup exported. Store it somewhere private.');return;}
  if(name==='clear-data'){if(!confirm('Erase all local LifeOS records on this device? Export a backup first. This cannot be undone.'))return;db=defaults();save();toast('Local records cleared.');return;}
- if(name==='enable-push'){enablePush();return;}
+ if(name==='enable-push'){if(pushEnabled)syncAllReminders();else enablePush();return;}
+ if(name==='repair-push'){enablePush(true);return;}
  if(name==='disable-push'){disablePush();return;}
  if(name==='test-notification'){sendTestNotification();return;}
  if(name==='sync-all'){syncAllReminders();return;}
@@ -273,7 +272,10 @@ function checkForeground(){
  localStorage.setItem(STORE,JSON.stringify(db));
 }
 function loadSession(){try{return JSON.parse(localStorage.getItem(SESSION_STORE));}catch(e){return null;}}
-async function loadConfig(){try{const res=await fetch('/.netlify/functions/app-config',{cache:'no-store'});if(res.ok)config=await res.json();}catch(e){}session=loadSession();if(session?.access_token&&session.expires_at<Date.now()+60000)await refreshSession();render();}
+async function loadConfig(){
+ try{const res=await fetch('/.netlify/functions/push',{cache:'no-store'});const obj=await res.json();config={vapidPublicKey:obj.publicKey||null,pushError:obj.error||'',configured:obj.configured};}catch(e){config={vapidPublicKey:null,pushError:'Push server unavailable: '+String(e.message||e)};}
+ render();
+}
 async function refreshSession(){
  if(!session?.refresh_token||!config.supabaseUrl||!config.supabaseAnonKey)return false;
  try{const r=await fetch(config.supabaseUrl+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'apikey':config.supabaseAnonKey,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:session.refresh_token})}),d=await r.json();if(!r.ok)throw Error(d.msg||d.error_description||'Session expired');session={...session,...d,email:session.email,expires_at:Date.now()+((d.expires_in||3600)*1000)};localStorage.setItem(SESSION_STORE,JSON.stringify(session));return true;}catch(e){session=null;localStorage.removeItem(SESSION_STORE);return false;}
@@ -294,53 +296,43 @@ async function requestAPI(name,body,method='POST'){
  if(!r.ok)throw Error(d.error||'Server request failed ('+r.status+').');
  return d;
 }
-async function enablePush(){
- try{
-  if(!config.vapidPublicKey||!config.supabaseUrl)throw Error('Push server not configured. Add the Netlify environment variables first.');
-  if(!session?.access_token)throw Error('Sign in first, then enable push.');
-  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window))throw Error('This browser does not support Web Push. On iPhone, add LifeOS to the Home Screen first.');
-  if(/iPhone|iPad|iPod/.test(navigator.userAgent)&&!window.matchMedia('(display-mode: standalone)').matches&&!navigator.standalone)throw Error('On iPhone, open LifeOS from its Home Screen icon before enabling notifications.');
-  const perm=await Notification.requestPermission();if(perm!=='granted')throw Error('Notification permission was not granted. Check your device settings.');
-  const reg=await navigator.serviceWorker.ready,previous=await reg.pushManager.getSubscription();
-  const subscription=previous||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey=urlBase64ToUint8Array(config.vapidPublicKey)});
-  await requestAPI('push-subscribe',{subscription:subscription.toJSON(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone});
-  pushEnabled=true;localStorage.setItem('lifeos.pushEnabled','1');render();toast('This device is subscribed. Syncing scheduled reminders.');await syncAllReminders(true);
- }catch(e){toast(String(e.message||e));}
-}
+let syncTimer=0;
 function urlBase64ToUint8Array(s){const pad='='.repeat((4-s.length%4)%4);const raw=atob((s+pad).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(raw,c=>c.charCodeAt(0));}
-async function disablePush(){
+async function deviceSubscription(){if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window))throw Error('This browser does not support Web Push. On iPhone install LifeOS to the Home Screen.');const reg=await navigator.serviceWorker.ready;return {reg,sub:await reg.pushManager.getSubscription()};}
+function pushItems(){return db.items.filter(x=>x.alert&&x.dueAt&&(!doneOn(x)||isRepeat(x))).map(x=>{
+ const due=String(x.dueAt).slice(0,16),detail=notificationContext(x).join(' · ')+(x.details||x.notes?' · '+(x.details||x.notes):'');
+ const kind={event:'appointment',chore:'home',bill:'bill',pet:'pet',workout:'workout',meal:'meal',habit:'habit',task:'task',reminder:'custom'}[x.kind]||'custom';
+ return {id:x.id,title:x.title,details:detail.slice(0,180),date:due.slice(0,10),time:due.slice(11,16),kind,repeat:x.repeat||'none',lead:Number(x.leadMinutes)||0,priority:x.priority==='Urgent'||x.priority==='High'?'high':'normal',enabled:true};
+ }).filter(x=>x.date.length===10&&x.time.length===5).slice(0,250);}
+function pushPayload(action,sub){return {action,subscription:sub.toJSON(),manageToken:localStorage.getItem(PUSH_TOKEN)||'',reminders:pushItems(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',privateMode:db.settings.privatePush===true,quiet:{enabled:db.settings.quietEnabled===true,start:db.settings.quietStart||'22:00',end:db.settings.quietEnd||'07:00'}};}
+async function callPush(body){const r=await fetch('/.netlify/functions/push',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const d=await r.json().catch(()=>({error:'Invalid server response'}));if(!r.ok)throw Error((d.code?d.code+': ':'')+(d.error||'Server error '+r.status));return d;}
+async function enablePush(repair=false){
  try{
-  if(!session?.access_token)throw Error('Sign in again to manage this subscription.');
-  const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();
-  if(sub){await requestAPI('push-unsubscribe',{endpoint:sub.endpoint});await sub.unsubscribe();}
-  pushEnabled=false;localStorage.removeItem('lifeos.pushEnabled');render();toast('Push disabled on this device.');
- }catch(e){toast(String(e.message||e));}
+  if(!config.vapidPublicKey)throw Error(config.pushError||'Set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT in Netlify, then redeploy.');
+  if(/iPhone|iPad|iPod/.test(navigator.userAgent)&&!window.matchMedia('(display-mode: standalone)').matches&&!navigator.standalone)throw Error('On iPhone, use Safari → Add to Home Screen and open LifeOS from the installed icon.');
+  if(Notification.permission==='denied')throw Error('Notifications are blocked in device settings. Re-enable permission there.');
+  const {reg,sub}=await deviceSubscription();
+  if(repair&&sub){await sub.unsubscribe();localStorage.removeItem(PUSH_TOKEN);pushEnabled=false;}
+  const active=repair||!sub?await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(config.vapidPublicKey)}):sub;
+  const result=await callPush(pushPayload('subscribe',active));
+  localStorage.setItem(PUSH_TOKEN,result.manageToken);pushEnabled=true;render();toast('Push connected. '+result.reminderCount+' reminders synced. Send a test push to verify.');
+ }catch(e){toast('Notification setup: '+String(e.message||e));}
 }
-async function syncReminder(item){
- if(!pushEnabled||!session?.access_token||!config.vapidPublicKey)return;
- try{
-  if(!item.alert||!item.dueAt||(!isRepeat(item)&&doneOn(item))){await requestAPI('push-reminder',{id:item.id},'DELETE');return;}
-  const n=buildNotification(item);
-  await requestAPI('push-reminder',{id:item.id,title:n.title,body:n.body,scheduledAt:new Date(item.dueAt).toISOString(),leadMinutes:Number(item.leadMinutes)||0,repeat:item.repeat||'none',timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,priority:item.priority||'Normal',url:'/#reminders'});
- }catch(e){console.warn('Reminder sync failed',e);toast('Reminder saved locally. Cloud sync failed: '+e.message);}
-}
+async function disablePush(){try{const {sub}=await deviceSubscription();if(sub&&localStorage.getItem(PUSH_TOKEN))await callPush(pushPayload('unsubscribe',sub));if(sub)await sub.unsubscribe();pushEnabled=false;localStorage.removeItem(PUSH_TOKEN);render();toast('Background push disabled on this device.');}catch(e){toast('Disable failed: '+String(e.message||e));}}
+function syncReminder(){if(!pushEnabled)return;clearTimeout(syncTimer);syncTimer=setTimeout(()=>syncAllReminders(true),750);}
 async function syncAllReminders(silent=false){
  if(!pushEnabled){if(!silent)toast('Enable push notifications first.');return;}
- let ok=0,fail=0;
- for(const it of db.items.filter(x=>x.alert&&x.dueAt)){try{await syncReminder(it);ok++;}catch(e){fail++;}}
- if(!silent)toast('Reminders synced: '+ok+(fail?' · '+fail+' errors':'')+'.');
+ try{const {sub}=await deviceSubscription();if(!sub)throw Error('Device subscription missing. Use Repair subscription.');const d=await callPush(pushPayload('sync',sub));if(!silent)toast(d.reminderCount+' detailed reminders synced.');}
+ catch(e){toast('Reminder sync failed: '+String(e.message||e));}
 }
 async function sendTestNotification(){
- try{
-  if(pushEnabled&&session?.access_token){await requestAPI('push-test',{message:'LifeOS test: your lock-screen notifications are connected. This is a test, not a scheduled life reminder.'});toast('Test push requested. Check your notifications.');return;}
-  if(!('Notification' in window))throw Error('Notifications are not supported here.');
-  const p=await Notification.requestPermission();if(p!=='granted')throw Error('Notification permission is blocked.');
-  const reg=await navigator.serviceWorker.ready;await reg.showNotification('LifeOS notification test',{body:'Local alert delivery works while the app is available. Enable background push for scheduled notifications when it is closed.',icon:'/icon.svg',tag:'lifeos-test',data:{url:'/#reminders'}});toast('Local notification sent.');
- }catch(e){toast(String(e.message||e));}
+ try{if(!pushEnabled)throw Error('Enable background push first.');const {sub}=await deviceSubscription();if(!sub)throw Error('Device subscription missing.');const r=await callPush(pushPayload('test',sub));toast(r.acceptedByProvider?'Push provider accepted the test. Check your lock screen or notification center.':'Test did not confirm acceptance.');}
+ catch(e){toast('Test failed: '+String(e.message||e));}
 }
 async function checkPushStatus(){
- if(!('serviceWorker' in navigator)||!session?.access_token||!config.vapidPublicKey)return;
- try{const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();pushEnabled=Boolean(sub);render();}catch(e){}
+ if(!config.vapidPublicKey||!('serviceWorker' in navigator))return;
+ try{const {sub}=await deviceSubscription();if(!sub){pushEnabled=false;render();return;}const status=await callPush(pushPayload('status',sub));pushEnabled=Boolean(status.enrolled);render();}
+ catch(e){pushEnabled=false;console.warn('LifeOS notification status',String(e.message||e));render();}
 }
 function del(id){const obj=db.items.find(x=>x.id===id);if(!obj||!confirm('Delete "'+obj.title+'"? This cannot be undone.'))return;db.items=db.items.filter(x=>x.id!==id);$('#entryDialog').close();save();if(obj.alert)syncReminder({...obj,alert:false});toast('Entry deleted.');}
 document.addEventListener('click',e=>{
