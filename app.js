@@ -148,7 +148,7 @@ function calendarPage(){
 }
 function reminderPage(){
  const all=db.items.filter(x=>x.dueAt&&x.alert&&!doneOn(x)),scheduled=all.map(x=>({...x,next:nextOccurrence(x)})).filter(x=>x.next).sort((a,b)=>a.next-b.next);
- const itemsHtml=scheduled.map(x=>'<article class="feature-card"><div class="feature-card-head"><div class="feature-icon">♧</div><span class="tag purple">'+safe(x.repeat==='none'?'One-time':x.repeat||'One-time')+'</span></div><h3>'+safe(buildNotification(x).title)+'</h3><p>'+safe(buildNotification(x).body)+'</p><div class="feature-bottom"><span class="pill">'+dateLabel(x.next)+' · '+timeLabel(x.next)+'</span><button class="entry-action" data-edit="'+safe(x.id)+'">›</button></div></article>').join('');
+ const itemsHtml=scheduled.map(x=>'<article class="feature-card"><div class="feature-card-head"><div class="feature-icon">♧</div><span class="tag purple">'+safe(x.repeat==='none'?'One-time':x.repeat||'One-time')+'</span></div><h3>'+safe(buildNotification(x).title)+'</h3><p>'+safe(buildNotification(x).body)+'</p><div class="feature-bottom"><span class="pill">'+dateLabel(x.next)+' · '+timeLabel(x.next)+'</span></div><div class="button-row" style="margin-top:1px"><button class="outline-btn" data-snooze="'+safe(x.id)+'">Snooze 10 min</button><button class="outline-btn" data-done="'+safe(x.id)+'">Mark done</button><button class="ghost-btn" data-edit="'+safe(x.id)+'">Edit</button></div></article>').join('');
  return header('Reminders','A useful notification should tell you what, when and why—not just beep.',newBtn('reminder','＋ New reminder'))+
  '<div class="metrics">'+metric('♧',scheduled.length,'Scheduled prompts')+metric('↻',scheduled.filter(x=>isRepeat(x)).length,'Recurring')+metric('◷',scheduled.filter(x=>(+x.leadMinutes||0)>0).length,'Advance alerts')+metric(pushEnabled?'✓':'○',pushEnabled?'On':'Off','Background push')+'</div>'+
  '<div class="status '+(pushEnabled?'good':'warn')+'" style="margin-bottom:17px">'+(pushEnabled?'Push is enabled on this device. Your scheduled reminders are synced to the notification server.':'Background push is not active yet. Open Settings → Notifications, install the app, and enable delivery even when LifeOS is closed.')+'</div>'+
@@ -236,6 +236,14 @@ function action(name){
  if(name==='test-notification'){sendTestNotification();return;}
  if(name==='sync-all'){syncAllReminders();return;}
  
+}
+function snoozeItem(id,minutes=10){
+ const original=db.items.find(x=>x.id===id);if(!original)return;
+ const until=new Date(Date.now()+minutes*60000);
+ const snoozed={...original,id:uid(),kind:'reminder',title:original.title,category:original.category||KIND[original.kind]?.label||'Personal',dueAt:localDateTime(until),repeat:'none',alert:true,leadMinutes:0,done:false,completedDates:[],createdAt:Date.now(),updatedAt:Date.now(),notes:(original.notes||'')};
+ if(isRepeat(original)){const today=dayKey(new Date());original.completedDates=[...new Set([...(original.completedDates||[]),today])];}
+ else original.done=true;
+ db.items.unshift(snoozed);save();syncReminder();toast('Snoozed for '+minutes+' minutes. A new alert is scheduled.');
 }
 function notificationContext(item){
  const kind=item.kind, t=item.title, parts=[];
@@ -359,9 +367,9 @@ async function checkPushStatus(){
 }
 function del(id){const obj=db.items.find(x=>x.id===id);if(!obj||!confirm('Delete "'+obj.title+'"? This cannot be undone.'))return;db.items=db.items.filter(x=>x.id!==id);$('#entryDialog').close();save();if(obj.alert)syncReminder({...obj,alert:false});toast('Entry deleted.');}
 document.addEventListener('click',e=>{
- const node=e.target.closest('[data-nav],[data-create],[data-edit],[data-action],[data-close],[data-delete],[data-day],[data-filter]');
+ const node=e.target.closest('[data-nav],[data-create],[data-edit],[data-action],[data-close],[data-delete],[data-day],[data-filter],[data-snooze],[data-done]');
  if(!node)return;
- if(node.dataset.nav){setPage(node.dataset.nav);return;}
+ if(node.dataset.snooze){snoozeItem(node.dataset.snooze,10);return;} if(node.dataset.done){const it=db.items.find(x=>x.id===node.dataset.done);if(it)completion(it);return;} if(node.dataset.nav){setPage(node.dataset.nav);return;}
  if(node.dataset.create){$('#quickDialog').close();openEntry(node.dataset.create);return;}
  if(node.dataset.edit){$('#quickDialog').close();const o=db.items.find(x=>x.id===node.dataset.edit);if(o)openEntry(o.kind,o.id);return;}
  if(node.dataset.action){action(node.dataset.action);return;}
