@@ -24,6 +24,20 @@ The Today screen has quick shortcuts for tasks, meals, workouts, reminders and w
 
 LifeOS is a static Progressive Web App with Netlify Functions. `npm run build` writes the deployment-ready website to `dist/`, including all experience-mode scripts and styles. The checked-in Netlify configuration publishes that directory, and GitHub Actions checks the build and unit tests after changes.
 
+## Monthly income and savings in Money
+
+The **Money** page now allows a simple local-first setup:
+
+1. Open **Money → Edit amounts** (shown automatically on first use).
+2. Enter **Monthly income** (expected take-home amount), **Current savings balance**, and optional **Savings goal**. Tap **Save amounts**.
+3. Add normal bills and expenses with **Add expense**. Choose category **Savings** for money you intend to transfer out of available income.
+4. **Savings transfer** is a shortcut that opens an editable expense prefilled to **$900, recurring monthly**. It does not create a transaction until you save it. You can change the amount or date.
+5. Switch months to review planned commitments, completed items, cash remaining after planned expenses, and savings goal progress.
+
+Savings transfers are counted as a **monthly expense allocation** in the available-income forecast, even though they are not consumption. The **Savings balance** is a separate manually entered real-world balance. Marking an expense paid does **not** silently increase that balance, since LifeOS cannot verify that a bank transfer occurred.
+
+No bank connection or third-party finance API is involved. All finance values and bill entries are stored in the existing local LifeOS record, included in its export backup. **Planned cash flow is not the same as your available bank balance.** Unscheduled bills must be assigned a date before they enter a month's forecast.
+
 ## Calendar sharing and mobile installation
 
 LifeOS can now publish a **private, read-only calendar subscription URL** that someone else may add to Apple Calendar, Google Calendar, or Outlook. Sharing is **opt-in**. By default, they see only **Busy** time blocks; event titles and locations are separate optional permissions. The link can be revoked from the Calendar screen. You can also import or export `.ics` files directly in LifeOS.
