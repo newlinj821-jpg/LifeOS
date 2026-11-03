@@ -52,20 +52,17 @@
    (state.summary?.pushConnected?'<button class="outline-btn" type="button" data-bank="unpair">Turn off bank alerts</button>':
    '<button class="primary-btn" type="button" data-bank="pair">Connect this phone for bank alerts</button>')+'</div>'+
    '<form id="lifeBankAlerts" class="bank-pref-form"><div class="bank-pref-intro"><h3>Your expected paycheck amount</h3>'+
-   '<p class="fine">Only a posted payroll/benefit deposit matching this amount <strong>exactly</strong> will be called a paycheck. A larger or smaller payment is treated as an ordinary deposit.</p></div>'+
+   '<p class="fine">Only a new posted deposit matching this amount <strong>exactly</strong> will be called a paycheck. A larger or smaller payment is treated as an ordinary deposit.</p></div>'+
    '<div class="bank-small-field"><label for="bankExpectedPay">Expected amount ($)</label>'+
    '<input class="field" type="text" inputmode="decimal" maxlength="15" id="bankExpectedPay" name="expectedPaycheckAmount" placeholder="e.g. 2500.00" value="'+clean(expected)+'">'+
    '<small>Enter the exact amount you normally receive. Amounts are matched to the cent.</small></div>'+
    '<label><input type="checkbox" name="paycheck" '+(p.paycheck?'checked':'')+'> Notify me when that paycheck is detected</label>'+
-   '<label><input type="checkbox" name="otherDeposits" '+(p.otherDeposits?'checked':'')+'> Other deposits (off by default)</label>'+
+   '<label><input type="checkbox" name="otherDeposits" '+(p.otherDeposits?'checked':'')+'> Other deposits (on by default)</label>'+
    '<label><input type="checkbox" name="largeExpense" '+(p.largeExpense?'checked':'')+'> Large purchases (off by default)</label>'+
    '<div class="bank-small-field"><label for="bankSpendingThreshold">Large purchase amount ($)</label><input class="field" type="text" inputmode="decimal" id="bankSpendingThreshold" name="largeExpenseAmount" value="'+clean(p.largeExpenseAmount||300)+'"></div>'+
    '<label><input type="checkbox" name="lowBalance" '+(p.lowBalance?'checked':'')+'> Low checking balance (off by default)</label>'+
    '<div class="bank-small-field"><label for="bankLowThreshold">Low balance amount ($)</label><input class="field" type="text" inputmode="decimal" id="bankLowThreshold" name="lowBalanceAmount" value="'+clean(p.lowBalanceAmount||100)+'"></div>'+
    '<label><input type="checkbox" name="showAmounts" '+(p.showAmounts?'checked':'')+'> Show bank amounts on my lock screen</label>'+
-   '<div class="bank-small-field"><label for="bankIncomeDescriptor">Other paycheck descriptions (optional)</label>'+
-   '<input class="field" type="text" maxlength="120" id="bankIncomeDescriptor" name="paycheckMatches" placeholder="Company Payroll" value="'+clean((p.paycheckMatches||[]).join(', '))+'">'+
-   '<small>Separate names with commas. VACP TREAS 310 and XXVA BENEF are already recognized, but only at your selected amount.</small></div>'+
    '<button class="primary-btn" type="submit">Save paycheck and alert settings</button></form>'+
    '<p class="fine bank-footnote">Bank alerts depend on Plaid delivering a posted transaction and your phone accepting push. Detection may be delayed. They are never scheduled at random times.</p>';
  }
