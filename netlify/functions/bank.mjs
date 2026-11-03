@@ -59,8 +59,13 @@ export default async function handler(req){
   if(action==='preferences'){
    const vault=await readVault();
    const p=b.preferences||{},old=vault.prefs||blankVault().prefs;
+   const expectedPaycheck=p.expectedPaycheck===null||p.expectedPaycheck===''?0:Number(p.expectedPaycheck);
+   if(!Number.isFinite(expectedPaycheck)||expectedPaycheck<0||expectedPaycheck>100000000||
+     Math.round(expectedPaycheck*100)!==expectedPaycheck*100)
+    return error('INVALID_PAYCHECK','Enter a valid paycheck amount with no more than two decimal places.');
    vault.prefs={...old,
-    vaDeposits:p.vaDeposits===true,deposits:p.deposits===true,
+    paycheck:p.paycheck===true,expectedPaycheck,
+    deposits:p.deposits===true,
     largePurchases:p.largePurchases===true,largeAmount:Math.min(100000,Math.max(1,Number(p.largeAmount)||250)),
     lowBalance:p.lowBalance===true,lowThreshold:Math.min(100000,Math.max(1,Number(p.lowThreshold)||100)),
     showAmounts:p.showAmounts===true,showDetails:false};
