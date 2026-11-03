@@ -23,8 +23,9 @@ if(b.action==='recover-start'){
  try{
   webpush.setVapidDetails(process.env.VAPID_SUBJECT,process.env.VAPID_PUBLIC_KEY,process.env.VAPID_PRIVATE_KEY);
   await webpush.sendNotification(b.subscription,JSON.stringify({
+   type:'lifeos-device-verification',code:verification.code,
    title:'LifeOS · Verification code: '+verification.code,
-   body:'Enter '+verification.code+' in LifeOS to reconnect notifications on this phone. Expires in 10 minutes.',
+   body:'LifeOS will reconnect automatically if open. Otherwise enter '+verification.code+' in LifeOS. Expires in 10 minutes.',
    tag:'lifeos-verify-device',url:'/#settings',priority:'high'
   }),{TTL:600,urgency:'high'});
  }catch(e){
