@@ -107,7 +107,7 @@ export function isPaycheck(t,config={}){
  if(!isDeposit(t))return false;
  // A posted refund/reversal is never pay, even if its amount coincidentally
  // matches the amount the user expects.
- if(/\\b(?:REFUND|REVERSAL|RETURNED|CASHBACK|CASH BACK)\\b/.test(incomeDescriptor(t)))return false;
+ if(/\b(?:REFUND|REVERSAL|RETURNED|CASHBACK|CASH BACK)\b/.test(incomeDescriptor(t)))return false;
  const p=bankPrefs(config);
  // Exact cents matter: a larger VA credit or payroll payment is an ordinary
  // deposit, never an unexpected paycheck notification.
