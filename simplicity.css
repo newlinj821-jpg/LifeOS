@@ -91,3 +91,20 @@
 @media(max-width:740px){.simple-content-grid,.simple-explore-grid{grid-template-columns:1fr}.simple-stats{gap:8px}.simple-today-hero{padding:23px 19px}.simple-hero-actions{gap:7px}.simple-stat{padding:12px}.simple-stat strong{font-size:20px}.simple-welcome-inner{padding:17px}.simple-welcome-footer{bottom:-17px}}
 @media(max-width:480px){.life-mode-grid{grid-template-columns:1fr;gap:7px}.life-mode-choice{min-height:auto;padding:12px 14px}.simple-welcome-top{align-items:flex-start}.simple-stats .simple-stat span{font-size:11px}.simple-focus-link.explore{margin-left:0}.simple-welcome-dialog{max-height:94dvh}.simple-welcome-inner h3{margin-top:14px}.simple-hero-actions .ghost-btn{padding:9px 7px}}
 @media(prefers-reduced-motion:reduce){.life-mode-choice{transition:none}}
+
+/* Compact task and reminder views */
+.simple-plan-layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px}
+.simple-list-placeholder{font-size:12px;color:var(--muted);padding:18px}
+.simple-reminder-status{display:flex;align-items:center;gap:12px;padding:13px 15px;border:1px solid var(--line);border-radius:13px;background:var(--panel);margin-bottom:16px}
+.simple-reminder-status>span{height:9px;min-width:9px;border-radius:50%;background:var(--warn)}
+.simple-reminder-status>span.connected{background:var(--good)}
+.simple-reminder-status p{flex:1;min-width:0;color:var(--muted);font-size:12px;line-height:1.5}
+.simple-reminder-row{display:flex;align-items:center;gap:13px;padding:13px 17px;border:0;border-top:1px solid var(--line);width:100%;background:none;color:var(--text);text-align:left}
+.simple-reminder-row:hover{background:var(--panel2)}
+.simple-reminder-symbol{font-size:18px;color:var(--accent);width:27px}
+.simple-reminder-text{min-width:0;flex:1}
+.simple-reminder-text strong,.simple-reminder-text small{display:block}
+.simple-reminder-text strong{font-size:13px}
+.simple-reminder-text small{font-size:11px;color:var(--muted);margin-top:5px}
+@media(max-width:780px){.simple-plan-layout{grid-template-columns:1fr}}
+@media(max-width:480px){.simple-reminder-status{flex-wrap:wrap}.simple-reminder-status .outline-btn{margin-left:21px}}
