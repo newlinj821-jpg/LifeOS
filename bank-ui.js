@@ -52,7 +52,7 @@
    (state.summary?.pushConnected?'<button class="outline-btn" type="button" data-bank="unpair">Turn off bank alerts</button>':
    '<button class="primary-btn" type="button" data-bank="pair">Connect this phone for bank alerts</button>')+'</div>'+
    '<form id="lifeBankAlerts" class="bank-pref-form"><div class="bank-pref-intro"><h3>Your expected paycheck amount</h3>'+
-   '<p class="fine">Only a new posted deposit matching this amount <strong>exactly</strong> will be called a paycheck. A larger or smaller payment is treated as an ordinary deposit.</p></div>'+
+   '<p class="fine">A new posted deposit matching this amount <strong>exactly</strong> will be called your paycheck. Larger or smaller deposits are ordinary deposits; known transfers and refunds are excluded.</p></div>'+
    '<div class="bank-small-field"><label for="bankExpectedPay">Expected amount ($)</label>'+
    '<input class="field" type="text" inputmode="decimal" maxlength="15" id="bankExpectedPay" name="expectedPaycheckAmount" placeholder="e.g. 2500.00" value="'+clean(expected)+'">'+
    '<small>Enter the exact amount you normally receive. Amounts are matched to the cent.</small></div>'+
