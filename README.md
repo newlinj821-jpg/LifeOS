@@ -24,6 +24,16 @@ The Today screen has quick shortcuts for tasks, meals, workouts, reminders and w
 
 LifeOS is a static Progressive Web App with Netlify Functions. `npm run build` writes the deployment-ready website to `dist/`, including all experience-mode scripts and styles. The checked-in Netlify configuration publishes that directory, and GitHub Actions checks the build and unit tests after changes.
 
+## Calendar sharing and mobile installation
+
+LifeOS can now publish a **private, read-only calendar subscription URL** that someone else may add to Apple Calendar, Google Calendar, or Outlook. Sharing is **opt-in**. By default, they see only **Busy** time blocks; event titles and locations are separate optional permissions. The link can be revoked from the Calendar screen. You can also import or export `.ics` files directly in LifeOS.
+
+The calendar service uses Netlify Functions and Blobs, with no new paid API or account. A subscription is not collaborative editing, and the receiving calendar app controls how often it refreshes. Only opted-in event fields are published while this device is online; other personal records stay local.
+
+[Calendar sharing instructions, privacy details, and provider setup](docs/CALENDAR_SHARING.md).
+
+For iPhone and Android, install LifeOS as a **standalone Home Screen web app** rather than using it in an ordinary browser tab. The build now generates PNG icons appropriate for each platform and provides mobile safe-area layouts. See Settings → **LifeOS on your device** for installation/update instructions.
+
 ## Public Reference Library and offline database
 
 LifeOS now includes a searchable **Reference Library** for:
