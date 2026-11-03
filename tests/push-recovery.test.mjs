@@ -59,11 +59,14 @@ test('Front end requires real server enrollment for push testing and offers reco
  assert.ok(server.includes("type:'lifeos-device-verification',code:verification.code"),'Only recovery pushes contain a verification code');
  assert.ok(server.indexOf("await store.setJSON(key,{...prev,recovery:verification.record})")<server.indexOf("await webpush.sendNotification(b.subscription"),'Persist challenge before delivering it to prevent a race');
 });
-test('iOS PWA uses opaque status bar and a fixed mobile header',()=>{
+test('iOS PWA reserves status bar and uses native document scrolling for keyboard focus',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  const css=readFileSync(new URL('../app-mobile.css',import.meta.url),'utf8');
  assert.match(html,/apple-mobile-web-app-status-bar-style" content="black"/);
  assert.ok(!html.includes('black-translucent'));
- assert.match(css,/\.topbar,body\.standalone-ios \.topbar\s*\{\s*position:fixed/);
- assert.match(css,/\.main-wrap\{padding-top:calc\(64px/);
+ assert.ok(css.includes('position:sticky!important'));
+ assert.ok(css.includes('overflow-y:auto!important'));
+ assert.ok(css.includes('touch-action:auto!important'));
+ assert.ok(css.includes('lifeos-keyboard-open .mobile-bottom'));
+ assert.ok(!css.includes('/* Mobile shell v2: ONE scroll container'));
 });
