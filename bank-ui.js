@@ -103,7 +103,12 @@
   if(currentPage!=='money')return;
   const element=document.querySelector('#view .finance-page');if(!element)return;
   const existing=element.querySelector('#lifeBankPanel');
-  if(existing){existing.outerHTML=markup();return;}
+  if(existing){
+   // Async Plaid responses must not destroy a focused code, amount, or search field.
+   const active=document.activeElement;
+   if(active&&existing.contains(active)&&active.matches?.('input,textarea,select'))return;
+   existing.outerHTML=markup();return;
+  }
   const anchor=element.querySelector('.finance-panels');
   if(anchor)anchor.insertAdjacentHTML('beforebegin',markup());
   else element.insertAdjacentHTML('beforeend',markup());
