@@ -68,3 +68,10 @@ test('Plaid and Money forms preserve keyboard focus and do not require a bank co
  for(const input of ['financeIncome','financeSavingsBalance','financeSavingsGoal'])assert.ok(finance.includes(input),input);
  assert.ok(finance.includes("event.preventDefault()"),'Money form retains submit handling');
 });
+
+test('Document click handlers never interpret the whole body as a mode button',()=>{
+ const simple=readFileSync(new URL('../simplicity.js',import.meta.url),'utf8');
+ assert.ok(simple.includes('button[data-life-mode]'),'Modes are only changed by explicit buttons');
+ assert.ok(simple.includes('target===document.body'),'Ignore non-interactive page container');
+ assert.ok(!simple.includes(',[data-life-mode],[data-life-focus]'),'The broad matching selector would cause every Save click to reset the whole app');
+});
