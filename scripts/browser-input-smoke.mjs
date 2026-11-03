@@ -55,7 +55,7 @@ async function until(expression,label,limitMs=10000){
 async function insert(selector,text){
  const present=await until(`document.querySelector(${JSON.stringify(selector)})!==null`,selector);
  if(!present)throw Error('Missing '+selector);
- const focus=await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});for(const d of document.querySelectorAll('dialog[open]'))d.close();e.value='';e.focus();return document.activeElement===e})()`);
+ const focus=await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});for(const d of document.querySelectorAll('dialog[open]'))if(!d.contains(e))d.close();e.value='';e.focus();return document.activeElement===e})()`);
  if(!focus)throw Error(selector+' could not focus');
  await command('Input.insertText',{text});
  const value=await evaluate(`document.querySelector(${JSON.stringify(selector)})?.value`);
