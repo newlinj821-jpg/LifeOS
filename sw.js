@@ -1,4 +1,4 @@
-const VERSION='lifeos-v4',SHELL=['/','/index.html','/styles.css','/simplicity.css','/knowledge.css','/app.js','/enhancements.js','/mode-core.js','/simplicity.js','/reference-db.js','/knowledge-bridge.js','/knowledge-core.mjs','/knowledge-ui.mjs','/manifest.webmanifest','/icon.svg'];
+const VERSION='lifeos-v6',SHELL=['/','/index.html','/styles.css','/simplicity.css','/knowledge.css','/mobile.css','/app-mobile.css','/calendar-share.css','/app.js','/enhancements.js','/mode-core.js','/simplicity.js','/reference-db.js','/knowledge-bridge.js','/calendar-share.js','/knowledge-core.mjs','/knowledge-ui.mjs','/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/apple-touch-icon.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(VERSION).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==VERSION).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
