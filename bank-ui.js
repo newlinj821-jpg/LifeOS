@@ -41,8 +41,9 @@ function panel(){
   content+=tx.length?'<div class="bank-transactions">'+tx.slice(0,state.showAll?80:12).map(t=>'<div class="bank-transaction"><div><strong>'+clean(t.vaBenefit?'VA benefits':t.name)+'</strong><small>'+clean(t.institution)+' · '+clean(t.date)+(t.pending?' · Pending':'')+'</small></div><b class="'+(t.amount<0?'bank-credit':'')+'">'+(t.amount<0?'+':'−')+dollars(Math.abs(t.amount))+'</b></div>').join('')+'</div><button class="outline-btn" data-bank="more">'+(state.showAll?'Show fewer':'Show more transactions')+'</button>':'<p class="fine">Plaid has not returned transaction history yet. Initial sync can take time.</p>';
  }else if(state.tab==='alerts'){
   content+='<form id="bankPrefs"><p class="fine">These alerts are event-triggered, not random reminders. They appear after new posted data reaches Plaid. Amounts are hidden from the lock screen by default.</p>'+
-   [['vaDeposits','VA benefits deposited','Notify when a new posted VA benefit credit is detected.'],
-    ['deposits','Other deposits','Notify on non-VA deposits, excluding transfers.'],
+   '<label class="bank-paycheck-field">Your expected paycheck ($)<input class="field" type="text" name="expectedPaycheck" inputmode="decimal" autocomplete="off" placeholder="Enter the exact amount, e.g. 2400.00" value="'+clean(prefs.expectedPaycheck||'')+'"><small>Only a posted deposit matching this amount to the cent is called a paycheck. Higher or lower amounts are ordinary deposits.</small></label>'+
+   [['paycheck','Paycheck received','Alert only when a new posted deposit exactly matches the amount above.'],
+    ['deposits','Other deposits','Alert for larger, smaller or unrelated deposits, excluding transfers.'],
     ['largePurchases','Large purchases','Alert when a posted purchase exceeds the threshold.'],
     ['lowBalance','Low checking balance','Alert once on crossing below the chosen threshold.'],
     ['showAmounts','Show amounts on lock screen','Optional; LifeOS private-preview mode overrides this.']].map(([name,label,sub])=>'<label class="bank-toggle"><span><strong>'+label+'</strong><small>'+sub+'</small></span><input name="'+name+'" type="checkbox" '+(prefs[name]?'checked':'')+'></label>').join('')+
@@ -138,7 +139,13 @@ document.addEventListener('submit',async e=>{
   if(!LifeOSFinanceCore.validAmount(amount('largeAmount'))||!LifeOSFinanceCore.validAmount(amount('lowThreshold'))){
    state.error=true;state.msg='Enter valid numeric thresholds before saving.';draw();return;
   }
-  await action('preferences',{preferences:{vaDeposits:f.has('vaDeposits'),deposits:f.has('deposits'),
+  const paycheck=String(form.elements.namedItem('expectedPaycheck')?.value||'').trim();
+  if(paycheck&&!LifeOSFinanceCore.validAmount(paycheck)){
+   state.error=true;state.msg='Enter a paycheck amount with no more than two decimal places.';draw();return;
+  }
+  await action('preferences',{preferences:{paycheck:f.has('paycheck'),
+   expectedPaycheck:paycheck?LifeOSFinanceCore.amount(paycheck):0,
+   deposits:f.has('deposits'),
    largePurchases:f.has('largePurchases'),largeAmount:LifeOSFinanceCore.amount(amount('largeAmount')),
    lowBalance:f.has('lowBalance'),lowThreshold:LifeOSFinanceCore.amount(amount('lowThreshold')),
    showAmounts:f.has('showAmounts')}});
