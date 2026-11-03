@@ -1,4 +1,4 @@
-const VERSION='lifeos-v7',SHELL=['/','/index.html','/styles.css','/simplicity.css','/knowledge.css','/mobile.css','/app-mobile.css','/calendar-share.css','/app.js','/enhancements.js','/mode-core.js','/simplicity.js','/reference-db.js','/knowledge-bridge.js','/calendar-share.js','/calendar-core.mjs','/install.js','/knowledge-core.mjs','/knowledge-ui.mjs','/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/icon-maskable-512.png','/apple-touch-icon.png'];
+const VERSION='lifeos-v8',SHELL=['/','/index.html','/styles.css','/simplicity.css','/knowledge.css','/mobile.css','/app-mobile.css','/calendar-share.css','/app.js','/enhancements.js','/mode-core.js','/simplicity.js','/reference-db.js','/knowledge-bridge.js','/calendar-share.js','/calendar-core.mjs','/install.js','/knowledge-core.mjs','/knowledge-ui.mjs','/manifest.webmanifest','/icon.svg','/icon-192.png','/icon-512.png','/icon-maskable-512.png','/apple-touch-icon.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(VERSION).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==VERSION).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
@@ -9,7 +9,11 @@ event.respondWith(fetch(request).then(response=>{if(response.ok){const copy=resp
 self.addEventListener('push',event=>{
 let payload={title:'LifeOS reminder',body:'Open LifeOS to review your reminder.',url:'/'};
 try{if(event.data)payload={...payload,...event.data.json()};}catch{}
-event.waitUntil(self.registration.showNotification(payload.title,{body:payload.body,icon:'/icon.svg',badge:'/icon.svg',tag:payload.tag||'lifeos-reminder',renotify:true,data:{url:payload.url||'/'},requireInteraction:payload.priority==='high'}));
+const display=self.registration.showNotification(payload.title,{body:payload.body,icon:'/icon.svg',badge:'/icon.svg',tag:payload.tag||'lifeos-reminder',renotify:true,data:{url:payload.url||'/'},requireInteraction:payload.priority==='high'});
+const deliver=payload.type==='lifeos-device-verification'&&typeof payload.code==='string'&&/^\\d{6}$/.test(payload.code)
+ ?self.clients.matchAll({type:'window',includeUncontrolled:true}).then(clients=>{for(const client of clients){client.postMessage({type:'lifeos-device-verification',code:payload.code});}})
+ :Promise.resolve();
+event.waitUntil(Promise.all([display,deliver]));
 });
 self.addEventListener('notificationclick',event=>{
 event.notification.close();
