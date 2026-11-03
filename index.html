@@ -18,6 +18,8 @@
   <link rel="stylesheet" href="/simplicity.css">
   <link rel="stylesheet" href="/knowledge.css">
   <link rel="stylesheet" href="/mobile.css">
+  <link rel="stylesheet" href="/app-mobile.css">
+  <link rel="stylesheet" href="/calendar-share.css">
   <title>LifeOS — Your life, in focus.</title>
 </head>
 <body>
@@ -49,7 +51,7 @@
   </div>
   <nav class="mobile-bottom" aria-label="Primary navigation">
     <button data-nav="today" class="mobile-tab active"><span>⌂</span><small>Today</small></button>
-    <button data-nav="planner" class="mobile-tab"><span>☑</span><small>Plan</small></button>
+    <button data-nav="calendar" class="mobile-tab"><span aria-hidden="true">▦</span><small>Calendar</small></button>
     <button id="mobileAdd" class="mobile-add" aria-label="Add new">＋</button>
     <button data-nav="reminders" class="mobile-tab"><span>♧</span><small>Alerts</small></button>
     <button id="mobileMore" class="mobile-tab"><span>☷</span><small>More</small></button>
@@ -64,6 +66,7 @@
   <script defer src="/reference-db.js"></script>
   <script defer src="/knowledge-bridge.js"></script>
   <script defer src="/install.js"></script>
+  <script defer src="/calendar-share.js"></script>
   <script type="module" src="/knowledge-ui.mjs"></script>
 </body>
 </html>
