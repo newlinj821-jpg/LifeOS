@@ -1,0 +1,103 @@
+/* LifeOS installed-app polish: native safe areas, readable typography, no emoji decoration. */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+html{background:var(--bg)}
+body{min-height:100svh;overscroll-behavior-x:none}
+button,input,select,textarea{touch-action:manipulation}
+button{user-select:none;-webkit-user-select:none}
+input,select,textarea{user-select:text;-webkit-user-select:text}
+.view,.main-wrap,.page-head,.panel,.settings-grid{min-width:0}
+.breadcrumb{min-width:0;max-width:100%;white-space:nowrap}
+.breadcrumb #breadcrumb{overflow:hidden;text-overflow:ellipsis;display:block;max-width:100%}
+.top-left{min-width:0;flex:1}
+.top-right{flex-shrink:0}
+.welcome::after{content:none!important;display:none!important}
+.welcome::before{content:"";position:absolute;pointer-events:none;inset:0;
+background:radial-gradient(circle at 90% 20%,rgba(171,145,250,.16),transparent 35%);
+opacity:.9}
+.welcome>*{position:relative;z-index:1}
+.brand-mark img{width:36px;height:36px;display:block;border-radius:11px;object-fit:cover}
+.brand-mark:has(img){background:none;box-shadow:none}
+:root[data-theme="light"] .topbar{background:rgba(255,255,255,.95)}
+:root[data-theme="light"] .mobile-bottom{background:rgba(255,255,255,.97)}
+:root[data-theme="light"] .mobile-tab{color:#626b82}
+:root[data-theme="light"] .mobile-tab.active{color:#6553bb}
+:root[data-theme="light"] .mobile-add{background:#8f77e0;color:#fff}
+@media(max-width:880px){
+ .topbar{min-height:64px;height:64px;padding:9px max(16px,env(safe-area-inset-right,0px)) 9px max(16px,env(safe-area-inset-left,0px));gap:10px}
+ .top-left,.top-right{gap:8px}
+ .top-left .icon-btn{flex:0 0 42px}
+ .breadcrumb{font-size:13px;font-weight:750;letter-spacing:-.2px}
+ .topbar .icon-btn{width:42px;height:42px;min-width:42px;font-size:23px}
+ .topbar .avatar{width:38px;height:38px;min-width:38px}
+ .sidebar{top:0;height:100dvh;max-height:100dvh;overflow:hidden}
+ .mobile-bottom{width:100%;min-height:calc(70px + env(safe-area-inset-bottom,0px));padding:7px max(10px,env(safe-area-inset-right,0px)) calc(7px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));backdrop-filter:blur(18px)}
+ .mobile-tab{min-height:50px;min-width:48px;justify-content:center}
+ .mobile-tab:active,.mobile-add:active{transform:scale(.96)}
+ .mobile-add{min-width:48px;min-height:48px}
+ .view{padding-bottom:calc(108px + env(safe-area-inset-bottom,0px))}
+ .toast{bottom:calc(92px + env(safe-area-inset-bottom,0px));width:max-content}
+ .dialog{max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 30px)}
+ .dialog .modal-content{max-height:60dvh}
+ .dialog .modal-actions{padding-bottom:max(15px,env(safe-area-inset-bottom,0px))}
+}
+@media(max-width:680px){
+ .topbar .top-right #searchButton{display:none}
+ .topbar .top-right #bellButton{display:none}
+ .topbar .top-right .avatar{border-radius:14px}
+ .topbar .breadcrumb b{display:none}
+ .breadcrumb #breadcrumb{max-width:min(46vw,230px)}
+ .settings-grid,.grid-two{grid-template-columns:1fr}
+ .settings-grid .wide{grid-column:auto}
+ .page-head,.head-actions{min-width:0}
+ .page-head h1{overflow-wrap:anywhere}
+ .button-row{display:flex;flex-wrap:wrap;gap:10px}
+ .button-row button{min-height:43px;max-width:100%}
+ .mobile-tab span{font-size:23px}
+ .mobile-tab small{font-size:11px}
+ .panel-pad{padding:17px}
+ .simple-today-hero h1{font-size:clamp(27px,7vw,35px)}
+ .simple-stat{min-width:0}
+ .simple-stat strong{white-space:nowrap}
+ .simple-welcome-dialog{max-width:calc(100vw - 22px)}
+ input:not([type="checkbox"]):not([type="radio"]),select,textarea{font-size:16px!important}
+}
+@media(max-width:390px){
+ .mobile-bottom{padding-left:7px;padding-right:7px}
+ .mobile-tab{min-width:42px}
+ .mobile-tab small{font-size:10px}
+ .topbar{padding-left:12px;padding-right:12px}
+ .breadcrumb #breadcrumb{max-width:125px}
+ .simple-stats{gap:6px}
+ .simple-stat{padding:10px 9px}
+ .simple-stat span{font-size:10px}
+ .simple-stat strong{font-size:19px}
+}
+@media(max-height:600px) and (orientation:landscape){
+ .view{padding-bottom:88px}
+ .mobile-bottom{min-height:58px}
+ .mobile-tab span{font-size:18px;line-height:19px}
+}
+@media(display-mode:standalone){
+ body{overscroll-behavior-y:contain}
+ .mobile-bottom{box-shadow:0 -8px 28px rgba(0,0,0,.18)}
+}
+@media(max-width:880px) and (display-mode:standalone){
+ .topbar{padding-top:calc(env(safe-area-inset-top,0px) + 8px);height:calc(64px + env(safe-area-inset-top,0px));min-height:calc(64px + env(safe-area-inset-top,0px))}
+ .sidebar{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+}
+body.standalone-ios{
+ --life-status-space:max(env(safe-area-inset-top,0px),44px);
+}
+@media(max-width:880px){
+ body.standalone-ios .topbar{
+   padding-top:calc(var(--life-status-space) + 7px);
+   min-height:calc(63px + var(--life-status-space));
+   height:calc(63px + var(--life-status-space));
+ }
+ body.standalone-ios .sidebar{padding-top:var(--life-status-space)}
+}
+.installer-panel{margin-bottom:15px}
+.installer-panel .install-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:13px}
+.installer-panel ol{color:var(--muted);font-size:12px;line-height:1.8;padding-left:20px;margin:9px 0}
+.installer-panel .install-status{font-size:11px;color:var(--muted);margin-top:12px}
+@media(prefers-reduced-motion:reduce){.mobile-tab:active,.mobile-add:active{transform:none}}
