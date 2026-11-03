@@ -31,7 +31,7 @@ Official project: https://wger.de/
 
 Official API docs: https://wger.readthedocs.io/en/latest/api/api.html
 
-wger permits **anonymous public reads** from its `/api/v2/` exercise catalog. LifeOS requests a bounded sample (up to 250 records) and extracts English titles, descriptions, equipment, categories, and muscles when provided. Because this is a sampled catalog, search results are **not exhaustive**. A public-source link remains available and the app does not claim to provide expert exercise prescriptions.
+wger permits **anonymous public reads** from its `/api/v2/` exercise catalog. LifeOS uses wger's documented \`name__search\` filter with bounded result pages (up to 100 records per search), and extracts English titles, descriptions, equipment, categories, and muscles when provided. Search results may still be incomplete due to language and source filtering. A public-source link remains available and the app does not claim to provide expert exercise prescriptions.
 
 wger exercise content and associated images may have licenses distinct from the software; this implementation **does not download or redistribute exercise images**. Users should consult the upstream project for its data licensing details before republishing any content.
 
