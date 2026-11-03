@@ -26,6 +26,12 @@ jobs:
           node --check netlify/lib/core.mjs
           node --check netlify/functions/push.mjs
           node --check netlify/functions/check-reminders.mjs
+          node --check calendar-share.js
+          node --check calendar-core.mjs
+          node --check install.js
+          node --check scripts/generate-icons.mjs
+          node --check netlify/lib/calendar.mjs
+          node --check netlify/functions/calendar-share.mjs
       - name: Build production PWA and verify required files
         run: |
           npm run build
@@ -41,5 +47,15 @@ jobs:
           test -f dist/knowledge-ui.mjs
           test -f dist/knowledge.css
           test -f dist/sw.js
+          test -f dist/calendar-share.js
+          test -f dist/calendar-share.css
+          test -f dist/calendar-core.mjs
+          test -f dist/mobile.css
+          test -f dist/app-mobile.css
+          test -f dist/install.js
+          test -f dist/icon-192.png
+          test -f dist/icon-512.png
+          test -f dist/icon-maskable-512.png
+          test -f dist/apple-touch-icon.png
       - name: Test reminder logic and experience modes
         run: node --test tests/*.test.mjs
