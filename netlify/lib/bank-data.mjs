@@ -112,8 +112,9 @@ export function isPaycheck(t,config={}){
  // Exact cents matter: a larger VA credit or payroll payment is an ordinary
  // deposit, never an unexpected paycheck notification.
  if(p.expectedPaycheckAmount===null||Math.round(Math.abs(t.amount)*100)!==Math.round(p.expectedPaycheckAmount*100))return false;
- // The user explicitly defines their paycheck by the posted amount. A credit
- // above OR below that amount is a deposit, even when described as VA benefits.
+ // A refund matching the amount must not masquerade as someone's paycheck.
+ const text=incomeDescriptor(t);
+ if(/\b(?:REFUND|REVERSAL|RETURNED?\s+PURCHASE|PURCHASE\s+RETURN|CHARGEBACK)\b/.test(text))return false;
  return true;
 }
 export function paycheckHistory(transactions,config={}){
