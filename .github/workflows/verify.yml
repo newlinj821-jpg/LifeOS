@@ -36,6 +36,7 @@ jobs:
           node --check netlify/functions/push.mjs
           node --check bank-ui.js
           node --check input-reliability.js
+          node --check scripts/browser-input-smoke.mjs
           node --check netlify/lib/bank-data.mjs
           node --check netlify/lib/bank-background.mjs
           node --check netlify/functions/plaid.mjs
@@ -91,3 +92,5 @@ jobs:
           test -f dist/apple-touch-icon.png
       - name: Test reminder logic and experience modes
         run: node --test tests/*.test.mjs
+      - name: Simulate mobile typing and saving in a real browser
+        run: node scripts/browser-input-smoke.mjs
