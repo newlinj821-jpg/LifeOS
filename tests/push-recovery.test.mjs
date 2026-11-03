@@ -51,6 +51,13 @@ test('Front end requires real server enrollment for push testing and offers reco
   assert.ok(js.includes(snippet),snippet);
  }
  assert.ok(!js.includes("LifeOS · Local notification test"),'Do not imply a local notification proves background push works');
+ assert.ok(js.includes("navigator.serviceWorker.addEventListener('message'"),'Client should accept service worker verification proof');
+ assert.ok(js.includes("recoveryCodeFromPush"),'Code can arrive before server acknowledgement');
+ const worker=readFileSync(new URL('../sw.js',import.meta.url),'utf8');
+ assert.ok(worker.includes("client.postMessage")||worker.includes("target.postMessage"),'Worker should relay proof to an active client');
+ const server=readFileSync(new URL('../netlify/functions/push.mjs',import.meta.url),'utf8');
+ assert.ok(server.includes("type:'lifeos-device-verification',code:verification.code"),'Only recovery pushes contain a verification code');
+ assert.ok(server.indexOf("await store.setJSON(key,{...prev,recovery:verification.record})")<server.indexOf("await webpush.sendNotification(b.subscription"),'Persist challenge before delivering it to prevent a race');
 });
 test('iOS PWA uses opaque status bar and a fixed mobile header',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
