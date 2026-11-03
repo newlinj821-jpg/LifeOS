@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {cleanCalendarEvents,escapeICSText,foldICSLine,generateICS,calendarPreview,ID_PATTERN} from '../netlify/lib/calendar.mjs';
 const event={uid:'item_123456_2026_11_3',title:'Lunch, coffee; & notes',location:'The café, Downtown',
  start:'2026-11-03T19:00:00.000Z',end:'2026-11-03T20:00:00.000Z'};
@@ -50,7 +51,6 @@ test('Duplicated event UIDs do not produce duplicate subscribed calendar entries
  assert.equal(ics.split('BEGIN:VEVENT').length-1,1);
 });
 test('Calendar source and offline styles are in build and HTML',()=>{
- const {readFileSync}=await import('node:fs');
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  const build=readFileSync(new URL('../build.mjs',import.meta.url),'utf8');
  const config=readFileSync(new URL('../netlify.toml',import.meta.url),'utf8');
