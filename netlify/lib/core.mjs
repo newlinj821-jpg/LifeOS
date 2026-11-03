@@ -22,7 +22,7 @@ export function notification(r,privateMode=false,occurrence=''){
  const time=(h%12||12)+':'+String(m).padStart(2,'0')+(h>=12?' PM':' AM');
  const titleText=String(r.title||category).replace(/\s+/g,' ').trim().slice(0,74);
  const details=String(r.details||'').replace(/\s+/g,' ').trim().slice(0,75);
- const when=r.lead===1440?'Tomorrow · '+time:r.lead>0?'In '+r.lead+' min · '+time:'Scheduled · '+time;
+ const when=r.lead===1440?'Tomorrow · '+time:r.lead>0?'In '+r.lead+' minutes · '+time:'Scheduled · '+time;
  const body=privateMode?'A '+category.toLowerCase()+' needs your attention. Open LifeOS to review.':
   (when+' · '+category+(details?' · '+details:''));
  return {title:privateMode?'LifeOS reminder':r.lead?'Coming up · '+titleText:'Reminder · '+titleText,
