@@ -48,6 +48,8 @@ async function until(expression,label,limitMs=10000){
   if(result)return result;
   await wait(120);
  }
+ const details=await evaluate("({url:location.href,ready:document.readyState,currentPage:typeof currentPage==='undefined'?'missing':currentPage,view:document.querySelector('#view')?.innerHTML.slice(0,700),hasCore:!!window.LifeOSFinanceCore,scripts:[...document.scripts].filter(x=>x.src).map(x=>x.src.split('/').pop())})").catch(e=>({diagnostic:String(e)}));
+ console.error('Mobile form diagnostics:',JSON.stringify(details));
  throw Error('Timed out waiting for '+label);
 }
 async function insert(selector,text){
@@ -83,6 +85,9 @@ try{
  await new Promise((resolve,reject)=>{ws.onopen=resolve;ws.onerror=reject;});
  ws.onmessage=event=>{
   const payload=JSON.parse(event.data);
+  if(payload.method==='Runtime.exceptionThrown'){
+   const d=payload.params?.exceptionDetails;console.error('Browser uncaught error:',String(d?.text||''),String(d?.exception?.description||'').slice(0,750));
+  }
   if(payload.id&&pending.has(payload.id)){
    const req=pending.get(payload.id);pending.delete(payload.id);
    payload.error?req.reject(Error(payload.error.message)):req.resolve(payload.result||{});
