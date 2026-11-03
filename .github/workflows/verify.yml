@@ -17,6 +17,11 @@ jobs:
           node --check enhancements.js
           node --check mode-core.js
           node --check simplicity.js
+          node --check reference-db.js
+          node --check knowledge-bridge.js
+          node --check knowledge-core.mjs
+          node --check knowledge-ui.mjs
+          node --check netlify/functions/knowledge.mjs
           node --check sw.js
           node --check netlify/lib/core.mjs
           node --check netlify/functions/push.mjs
@@ -30,6 +35,11 @@ jobs:
           test -f dist/mode-core.js
           test -f dist/simplicity.js
           test -f dist/simplicity.css
+          test -f dist/reference-db.js
+          test -f dist/knowledge-bridge.js
+          test -f dist/knowledge-core.mjs
+          test -f dist/knowledge-ui.mjs
+          test -f dist/knowledge.css
           test -f dist/sw.js
       - name: Test reminder logic and experience modes
         run: node --test tests/*.test.mjs
