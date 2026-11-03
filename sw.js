@@ -10,7 +10,7 @@ self.addEventListener('push',event=>{
 let payload={title:'LifeOS reminder',body:'Open LifeOS to review your reminder.',url:'/'};
 try{if(event.data)payload={...payload,...event.data.json()};}catch{}
 const display=self.registration.showNotification(payload.title,{body:payload.body,icon:'/icon.svg',badge:'/icon.svg',tag:payload.tag||'lifeos-reminder',renotify:true,data:{url:payload.url||'/'},requireInteraction:payload.priority==='high'});
-const deliver=payload.type==='lifeos-device-verification'&&typeof payload.code==='string'&&/^\\d{6}$/.test(payload.code)
+const deliver=payload.type==='lifeos-device-verification'&&typeof payload.code==='string'&&/^[0-9]{6}$/.test(payload.code)
  ?self.clients.matchAll({type:'window',includeUncontrolled:true}).then(clients=>{for(const client of clients){client.postMessage({type:'lifeos-device-verification',code:payload.code});}})
  :Promise.resolve();
 event.waitUntil(Promise.all([display,deliver]));
