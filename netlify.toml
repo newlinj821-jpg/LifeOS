@@ -21,16 +21,5 @@
   [headers.values]
     Cache-Control = "no-cache, must-revalidate"
 
-# Read-only, revocable calendar subscription URL for Apple Calendar and Google Calendar.
-[[redirects]]
-  from = "/calendar/:file"
-  to = "/.netlify/functions/calendar-share?id=:file"
-  status = 200
-  force = true
-
-[[headers]]
-  for = "/calendar/*"
-  [headers.values]
-    Cache-Control = "no-cache, no-store, must-revalidate"
-    Referrer-Policy = "no-referrer"
-    X-Content-Type-Options = "nosniff"
+# Calendar subscription feeds are served at /.netlify/functions/calendar-share?id=<private-id>.
+# Avoid fragile path rewrites; calendar clients can subscribe directly to this HTTPS ICS URL.
