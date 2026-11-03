@@ -60,7 +60,7 @@
     }
     baseRender();
     if(currentPage==='today')$('#view').innerHTML=simpleToday();
-    if(currentMode()==='simple'){if(currentPage==='planner')$('#view').innerHTML=simplePlanner();else if(currentPage==='reminders')$('#view').innerHTML=simpleReminders();}
+    if(currentMode()!=='advanced'){if(currentPage==='planner')$('#view').innerHTML=simplePlanner();else if(currentPage==='reminders')$('#view').innerHTML=simpleReminders();}
     if(currentPage==='settings'&&currentMode()==='simple'){
       const oldSection=[...document.querySelectorAll('#view section')].find(x=>x.querySelector('h2')?.textContent==='Show or hide modules');
       if(oldSection)oldSection.hidden=true;
