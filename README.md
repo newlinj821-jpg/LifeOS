@@ -4,9 +4,9 @@ An ad-free, installable personal operating system for daily life. The front end 
 
 ## Included modules
 
-Today dashboard, tasks and priorities, calendar, recurring routines, workout logging, food and water logging, bills and budgeting, household chores, pet care, wellness check-ins, projects, goals, personal notes, journal, reminders, insights and customizable settings.
+Today dashboard, adaptive day planner, natural-language quick capture, personal automation rules, tasks and priorities, calendar, recurring routines, workout logging, food and water logging, bills and budgeting, household chores, pet care, wellness check-ins, projects, goals, personal notes, journal, reminders, insights and customizable settings.
 
-Reminders support one-time, daily, weekday, weekly and monthly schedules; advance warnings at the exact scheduled time, 5, 10, 15, 30, 60 minutes or one day before; lock-screen privacy, quiet hours, normal/high priority, device-specific settings and a delivery test. The server evaluates schedules every minute. Device, browser and network conditions can cause delays.
+Reminders support one-time, daily, weekday, weekly and monthly schedules; advance warnings at the exact scheduled time, 5, 10, 15, 30, 60 minutes or one day before; lock-screen privacy, quiet hours, normal/high priority, device-specific settings and a delivery test. The server evaluates schedules every five minutes. Device, browser and network conditions can cause delays.
 
 ## Deploy via Netlify
 
@@ -37,7 +37,7 @@ On Android and desktop, follow your browser's notification permission prompt.
 
 ## How alerts work
 
-The scheduled Netlify Function checks every minute. It reads registered device schedules, uses the device's IANA timezone to calculate local time, and sends push payloads to the browser push service. Delivery is generally close to the scheduled minute, not exact to the second.
+The scheduled Netlify Function checks every five minutes. It reads registered device schedules, uses the device's IANA timezone to calculate local time, and sends push payloads to the browser push service. Delivery is usually within several minutes of the scheduled time, not exact to the second.
 
 Each device receives a random private management token on enrollment, allowing it to update or revoke its own subscription. Only selected reminder titles, schedule, optional brief context, timezone, priority, quiet hours, lock-screen privacy preference and encrypted browser push endpoint are stored on the server. The full journal, notes, finances and personal records are not uploaded.
 
@@ -53,9 +53,9 @@ The application contains no advertisements or analytics tracking. It is not an e
 
 ## Developer notes
 
-The front end is index.html + styles.css + app.js, with sw.js, manifest.webmanifest, and icon.svg for PWA installation. Push service functions are in netlify/functions and shared logic in netlify/lib. The repository includes automated syntax checks and unit tests for reminder time calculations and notification wording.
+The front end is index.html + styles.css + app.js + enhancements.js, with sw.js, manifest.webmanifest, and icon.svg for PWA installation. Push service functions are in netlify/functions and shared logic in netlify/lib. The repository includes automated syntax checks and unit tests for reminder time calculations and notification wording.
 
-Run: node --check app.js
+Run: node --check app.js\nRun: node --check enhancements.js
 Run: node --test tests/*.test.mjs
 
 For notification issues review the Netlify Functions logs for push and check-reminders. Verify all three VAPID variables and redeploy after modifying them.
