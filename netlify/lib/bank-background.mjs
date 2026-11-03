@@ -104,10 +104,10 @@ export async function updateBanks({itemId=null,includeAccounts=true}={}){
 }
 export function bankMessage(alert,config){
  const money=config.showAmounts?' · '+currency(alert.amount):'';
- if(alert.kind==='paycheck')return {title:'Paycheck deposited'+money,body:'A new paycheck was reported by your bank. Open LifeOS Money to review.'};
- if(alert.kind==='deposit')return {title:'Deposit received'+money,body:'A new deposit was reported by your bank. Open Money for details.'};
- if(alert.kind==='spending')return {title:'Large purchase posted'+money,body:'A posted transaction met your spending alert threshold.'};
- return {title:'Checking balance alert',body:'Your bank-reported checking balance is below your chosen threshold.'};
+ if(alert.kind==='paycheck')return {title:'Paycheck received'+money,body:'A posted deposit matched your saved paycheck amount. Review the transaction in Money.'};
+ if(alert.kind==='deposit')return {title:'Deposit received'+money,body:'A new bank deposit was posted. Review the amount and source in Money.'};
+ if(alert.kind==='spending')return {title:'Large purchase posted'+money,body:'A purchase reached the amount you chose for spending alerts.'};
+ return {title:'Checking balance is low',body:'Your reported checking balance crossed below your selected threshold.'};
 }
 function inQuiet(config,zone,date){
  try{return quiet(clock(date,zone),config.quietStart,config.quietEnd);}
@@ -122,18 +122,22 @@ export async function deliverBankAlerts(){
  if(inQuiet(prefs,device.timezone,new Date()))return {sent:0,pending:queued.length,quiet:true};
  const date=dayKey(),history=vault.bankDaily||{};
  const count=history.date===date?history.sent||0:0;
- if(count>=prefs.maxDaily)return {sent:0,pending:queued.length,limit:true};
+ // A confirmed paycheck is important enough not to be blocked by the daily
+ // cap for routine deposit/purchase alerts.
+ if(count>=prefs.maxDaily&&!queued.some(a=>a.kind==='paycheck'))return {sent:0,pending:queued.length,limit:true};
  webpush.setVapidDetails(process.env.VAPID_SUBJECT,process.env.VAPID_PUBLIC_KEY,process.env.VAPID_PRIVATE_KEY);
  let sent=0;
- for(const entry of queued.slice()){
-  if(count+sent>=prefs.maxDaily)break;
+ for(const entry of queued.slice().sort((a,b)=>Number(b.kind==='paycheck')-Number(a.kind==='paycheck'))){
+  if(entry.kind!=='paycheck'&&count+sent>=prefs.maxDaily)continue;
+  // Do not deliver stale bank alerts days after the actual transaction.
+  if(Date.now()-(entry.createdAt||0)>36*3600000)continue;
   // Claim BEFORE network delivery so concurrent webhook/cron runs cannot repeatedly notify.
   const current=await readVault();
   const found=current.alertQueue?.find(x=>x.id===entry.id&&!x.claimedAt);
   if(!found)continue;
   found.claimedAt=Date.now();
   await writeVault(current);
-  const copy=bankMessage(entry,prefs);
+  const copy=bankMessage(entry,{...prefs,showAmounts:prefs.showAmounts===true&&device.privateMode!==true});
   try{
    await webpush.sendNotification(device.subscription,JSON.stringify({
     title:copy.title,body:copy.body,tag:'lifeos-bank-'+digest(entry.id).slice(0,14),
