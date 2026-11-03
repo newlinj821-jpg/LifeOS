@@ -99,6 +99,7 @@ export async function updateBanks({itemId=null,includeAccounts=true}={}){
  const expiry=Date.now()-14*86400000;
  vault.alertSeen=Object.fromEntries(Object.entries(vault.alertSeen).filter(([,t])=>t>expiry).slice(-800));
  vault.alertQueue=vault.alertQueue.filter(e=>Date.now()-(e.createdAt||0)<5*86400000).slice(-60);
+ vault.updatedAt=Date.now();
  await writeVault(vault);
  return {updated:(vault.items||[]).filter(i=>!itemId||itemId===i.itemId).length,warnings,queued:records.length};
 }
