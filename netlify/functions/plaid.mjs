@@ -4,7 +4,7 @@ import {getStore} from '@netlify/blobs';
 import {updateBanks,deliverBankAlerts} from '../lib/bank-background.mjs';
 import {randomBytes} from 'node:crypto';
 import {currentEnvironment,isConfigured,verifySetupKey,newSession,storeSession,sessionValid,deleteSession,readVault,writeVault} from '../lib/bank-security.mjs';
-import {normalizeAccount,normalizeTransaction,applyTransactions,bankPrefs,paycheckHistory,summarizeTransactions} from '../lib/bank-data.mjs';
+import {normalizeAccount,normalizeTransaction,applyTransactions,mergeBankAccounts,bankPrefs,paycheckHistory,summarizeTransactions} from '../lib/bank-data.mjs';
 import {plaidLinkOptions,describePlaidError} from '../lib/plaid-link.mjs';
 
 const base=()=>currentEnvironment()==='production'?'https://production.plaid.com':'https://sandbox.plaid.com';
@@ -139,7 +139,7 @@ export default async function handler(request){
    // The token is securely retained even if the bank is not ready for transactions.
    try{
     const data=await callPlaid('accounts/get',{access_token:record.accessToken});
-    record.accounts=safeAccountList(data,record.itemId);
+    record.accounts=mergeBankAccounts(record.accounts,safeAccountList(data,record.itemId));
     record.updatedAt=Date.now();vault.updatedAt=Date.now();
     await writeVault(vault);
    }catch(e){record.warning='Account details are still loading. Select Refresh later.';await writeVault(vault);}
