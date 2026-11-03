@@ -79,7 +79,9 @@ test('Savings is included in the original bill editor and the installable PWA bu
    assert.ok(build.includes(file));
    assert.ok(serviceWorker.includes('/'+file));
  }
- assert.ok(page.includes("amount.value='900'"));
+ assert.ok(page.includes("amount.value=''"),'Savings transfer input starts blank');
+ assert.ok(page.includes("amount.required=true"),'Savings transfer requires the user to enter an amount');
+ assert.ok(!page.includes("amount.value='900'"),'Savings shortcut must never hard-code a contribution');
  assert.ok(page.includes("repeat.value='monthly'"));
  assert.ok(page.includes("cat.value='Savings'"));
  assert.ok(page.includes("financeSetupForm"));
