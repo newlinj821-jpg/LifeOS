@@ -6,4 +6,5 @@ for(const file of ['index.html','styles.css','simplicity.css','app.js','enhancem
  if(!existsSync(file))throw new Error('Missing required asset: '+file);
  copyFileSync(file,join(output,file));
 }
+await import('./scripts/generate-icons.mjs');
 console.log('LifeOS: static PWA build ready in dist/');
