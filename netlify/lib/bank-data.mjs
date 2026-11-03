@@ -21,7 +21,7 @@ export function mergeBankAccounts(previous,fresh,updatedAt=Date.now()){
   const available=Number.isFinite(a.available)?a.available:Number.isFinite(prev?.available)?prev.available:null;
   const retained=(a.current===null&&Number.isFinite(prev?.current))||(a.available===null&&Number.isFinite(prev?.available));
   return {...a,current,available,lastReportedAt:retained?(prev?.lastReportedAt||null):updatedAt,stale:Boolean(retained)};
- });
+ }).concat(old.filter(a=>!next.some(x=>x.id===a.id)).map(a=>({...a,stale:true})));
 }
 export function normalizeTransaction(x,itemId){
  if(!x||typeof x.transaction_id!=='string'||!x.account_id)return null;
