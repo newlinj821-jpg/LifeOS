@@ -24,6 +24,18 @@ The Today screen has quick shortcuts for tasks, meals, workouts, reminders and w
 
 LifeOS is a static Progressive Web App with Netlify Functions. `npm run build` writes the deployment-ready website to `dist/`, including all experience-mode scripts and styles. The checked-in Netlify configuration publishes that directory, and GitHub Actions checks the build and unit tests after changes.
 
+## Optional Plaid bank connection and paycheck alerts
+
+LifeOS Money now offers a **read-only Plaid bank connection** beside the manual monthly-income, expenses, and savings tools. It includes a private, encrypted server-side bank vault, checking/savings account balances, posted transactions, an expected paycheck amount, and optional bank notifications.
+
+**Paycheck classification:** In **Money → Bank connection → Paychecks**, enter the exact amount you normally receive. A newly posted deposit of that amount triggers a paycheck alert when enabled. Larger or smaller credits are treated as ordinary deposits; identified refunds and transfers are excluded. Descriptors such as `VACP TREAS 310` and `XXVA BENEF` are recognized but never override the exact amount.
+
+Bank alerts require a verified LifeOS Web Push subscription. They are **opt-in**, hide dollar amounts on the lock screen by default, observe **10 PM–8 AM quiet hours**, and are limited to **two alerts per day**. The server receives verified Plaid transaction webhooks plus periodic fallback checks. Connected access tokens persist while the LifeOS app is closed, but Plaid and the bank control data availability; alerts cannot be promised at the precise moment of posting.
+
+The five required Netlify environment variables are `PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV`, `LIFEOS_BANK_SETUP_KEY`, and `LIFEOS_BANK_ENCRYPTION_KEY`. To get prompt posted-deposit updates and support OAuth banks, configure `PLAID_WEBHOOK_URL` and `PLAID_REDIRECT_URI` too. Never add secrets to GitHub.
+
+**Full setup:** [Connect Plaid to LifeOS](docs/PLAID_SETUP.md).
+
 ## Monthly income and savings in Money
 
 The **Money** page now allows a simple local-first setup:
