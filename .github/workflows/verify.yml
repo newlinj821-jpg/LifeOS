@@ -15,9 +15,21 @@ jobs:
         run: |
           node --check app.js
           node --check enhancements.js
+          node --check mode-core.js
+          node --check simplicity.js
           node --check sw.js
           node --check netlify/lib/core.mjs
           node --check netlify/functions/push.mjs
           node --check netlify/functions/check-reminders.mjs
-      - name: Check push scheduling logic
+      - name: Build production PWA and verify required files
+        run: |
+          npm run build
+          test -f dist/index.html
+          test -f dist/app.js
+          test -f dist/enhancements.js
+          test -f dist/mode-core.js
+          test -f dist/simplicity.js
+          test -f dist/simplicity.css
+          test -f dist/sw.js
+      - name: Test reminder logic and experience modes
         run: node --test tests/*.test.mjs
