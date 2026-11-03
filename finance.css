@@ -1,0 +1,112 @@
+/* LifeOS Money — mobile-first income, expenses and savings. */
+.finance-page{display:flex;flex-direction:column;gap:16px;min-width:0}
+.finance-head{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:1px}
+.finance-head .eyebrow{color:#b89af4}
+.finance-head h1{font-size:clamp(30px,4vw,39px);line-height:1.1;letter-spacing:-.04em;margin:8px 0 10px}
+.finance-head p{color:var(--muted);line-height:1.5;font-size:13px}
+.finance-head-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.finance-head-actions button{min-height:43px}
+.finance-month{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 11px;width:fit-content;max-width:100%}
+.finance-month span{color:var(--muted);font-size:11px;margin-right:4px}
+.finance-month strong{font-weight:740;min-width:128px;text-align:center;font-size:13px}
+.finance-month button{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:9px;width:33px;height:33px;font-size:20px}
+.finance-month button:hover{border-color:var(--accent)}
+.finance-month .finance-month-today{width:auto;font-size:11px;padding:0 10px}
+.finance-onboard{background:linear-gradient(135deg,rgba(165,135,242,.16),rgba(165,135,242,.04));border:1px solid rgba(175,150,247,.38);padding:17px 19px;border-radius:14px}
+.finance-onboard strong{font-size:14px}.finance-onboard p{font-size:12px;color:var(--muted);line-height:1.55;margin-top:7px}
+.finance-setup{border-color:#50476e}
+.finance-section-head{display:flex;align-items:start;justify-content:space-between;gap:12px;margin-bottom:13px}
+.finance-section-head h2{font-size:18px}
+.finance-section-head .fine{margin-top:7px}
+.finance-setup-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.finance-setup-fields label{display:flex;flex-direction:column;gap:6px;min-width:0;color:var(--text)}
+.finance-setup-fields label span{font-size:12px;font-weight:740}
+.finance-setup-fields label small{color:var(--muted);font-size:11px;line-height:1.45;min-height:32px}
+.finance-setup-fields input{font-size:16px;min-height:45px;max-width:100%}
+.finance-setup-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:17px}
+.finance-setup-footer .fine{max-width:350px}
+.finance-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
+.finance-metric{min-width:0;display:flex;flex-direction:column;gap:11px;padding:17px;background:var(--panel);border:1px solid var(--line);border-radius:16px}
+.finance-metric-highlight{border-color:rgba(177,143,245,.5);background:linear-gradient(155deg,rgba(162,130,248,.12),var(--panel))}
+.finance-metric-top{display:flex;align-items:center;gap:10px;min-width:0;font-size:11px;color:var(--muted);font-weight:660}
+.finance-metric-icon{color:#be9efb;background:rgba(158,125,227,.14);display:grid;place-items:center;width:32px;height:32px;flex:0 0 32px;border-radius:10px;font-size:17px}
+.finance-metric>strong{font-weight:790;font-size:clamp(18px,2.1vw,25px);font-variant-numeric:tabular-nums;line-height:1.15;letter-spacing:-.6px;overflow-wrap:anywhere}
+.finance-metric>small{font-size:10px;line-height:1.45;color:var(--muted)}
+.finance-budget-warning{padding:13px 15px;border-radius:12px;border:1px solid #cc7b84;color:#f1b5be;font-size:12px;background:rgba(217,100,120,.08);line-height:1.5}
+.finance-panels{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;min-width:0}
+.finance-panels>.panel{min-width:0;height:100%;border-radius:16px}
+.finance-saving-balance{display:flex;flex-direction:column;gap:6px;margin:15px 0}
+.finance-saving-balance strong{font-size:31px;letter-spacing:-.6px;font-variant-numeric:tabular-nums}
+.finance-saving-balance span{font-size:12px;color:var(--muted)}
+.finance-progress{height:9px;background:var(--panel3);border-radius:99px;overflow:hidden;margin:12px 0 8px}
+.finance-progress>div{height:100%;border-radius:inherit;background:linear-gradient(90deg,#9979e5,#c1b0ff)}
+.finance-goal-summary{margin-bottom:16px}
+.finance-savings-transfer{border:1px solid var(--line);padding:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-radius:12px;margin-top:16px}
+.finance-savings-transfer>div{display:flex;flex-direction:column;gap:5px;min-width:0}
+.finance-savings-transfer strong{font-size:12px}
+.finance-savings-transfer span{font-size:11px;color:var(--muted)}
+.finance-savings-transfer button{font-size:11px;white-space:nowrap}
+.finance-disclaimer{line-height:1.5;margin-top:13px}
+.finance-split{display:flex;overflow:hidden;border-radius:99px;background:var(--panel3);height:12px;margin:18px 0 15px}
+.finance-split>div{height:100%;transition:width .2s}
+.finance-split-expenses{background:#8c7aaf}
+.finance-split-savings{background:#b79bf5}
+.finance-breakdown{display:flex;flex-direction:column;gap:12px}
+.finance-breakdown>div{display:flex;align-items:center;gap:9px;font-size:12px}
+.finance-breakdown>div>span:nth-child(2){color:var(--muted);flex:1}
+.finance-breakdown strong{font-variant-numeric:tabular-nums}
+.finance-legend-dot{width:9px;height:9px;border-radius:50%;flex:0 0 9px;background:#8c7aaf}
+.finance-legend-dot.savings{background:#b79bf5}
+.finance-legend-dot.available{background:#74b8a6}
+.finance-negative{color:#ef9b9f}
+.finance-entries{overflow:hidden}
+.finance-entries .panel-head{align-items:center}
+.finance-entries .panel-head h2{font-size:17px}
+.finance-entries .panel-head p{margin-top:5px}
+.finance-filter-line{padding:0 16px 13px;display:flex;flex-direction:column;gap:10px}
+.finance-filter-line input{font-size:16px;max-width:100%}
+.finance-chips{display:flex;flex-wrap:wrap;gap:6px}
+.finance-chips .chip{font-size:11px;padding:8px 11px}
+.finance-entry{display:flex;align-items:center;gap:11px;padding:13px 16px;border-top:1px solid var(--line);min-width:0}
+.finance-entry-icon{display:grid;place-items:center;flex:0 0 35px;width:35px;height:35px;border-radius:10px;background:var(--panel2);color:var(--accent);font-size:18px}
+.finance-entry-icon.is-savings{color:#c5abfc;background:rgba(168,139,234,.16)}
+.finance-entry-copy{flex:1;min-width:0;color:var(--text);background:transparent;border:0;text-align:left;padding:0}
+.finance-entry-copy strong{display:block;font-size:12px;overflow-wrap:anywhere;line-height:1.4}
+.finance-entry-copy small{display:block;color:var(--muted);font-size:10px;line-height:1.45;margin-top:3px}
+.finance-entry-price{text-align:right;flex:0 0 auto;display:flex;flex-direction:column;gap:5px;font-variant-numeric:tabular-nums}
+.finance-entry-price strong{font-size:12px}
+.finance-entry-price small{color:var(--muted);font-size:10px}
+.finance-entry-price .finance-complete{color:var(--good)}
+.finance-entry .tick{flex-shrink:0}
+.finance-empty{text-align:center;padding:25px 16px 29px;color:var(--text);border-top:1px solid var(--line)}
+.finance-empty strong{font-size:13px}
+.finance-empty p{font-size:12px;color:var(--muted);line-height:1.5;margin:7px 0 15px}
+.finance-unscheduled{padding:16px;border-top:1px solid var(--line)}
+.finance-unscheduled strong{font-size:12px}
+.finance-unscheduled p{margin:5px 0 8px}
+.finance-unscheduled button{display:block;background:none;border:0;padding:9px 0;text-align:left;color:var(--text);font-size:12px}
+:root[data-theme="light"] .finance-setup{border-color:#d7cbef}
+:root[data-theme="light"] .finance-budget-warning{color:#a8344e}
+@media(max-width:1100px){.finance-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:780px){.finance-panels{grid-template-columns:1fr}.finance-setup-fields{grid-template-columns:1fr}.finance-setup-fields label small{min-height:0}.finance-head-actions{width:100%}.finance-head-actions button{flex:1}}
+@media(max-width:500px){
+ .finance-page{gap:13px}
+ .finance-head h1{font-size:31px}
+ .finance-head-actions button{font-size:12px}
+ .finance-metrics{gap:9px}
+ .finance-metric{padding:13px;gap:9px;min-height:118px}
+ .finance-metric-top{font-size:10px;gap:8px}
+ .finance-metric-icon{width:30px;height:30px;flex-basis:30px}
+ .finance-metric>strong{font-size:clamp(18px,5.6vw,23px)}
+ .finance-metric>small{font-size:10px}
+ .finance-month{width:100%;justify-content:space-between}
+ .finance-month .finance-month-today{font-size:10px}
+ .finance-panels>.panel{padding:16px}
+ .finance-savings-transfer{flex-wrap:wrap;align-items:start}
+ .finance-savings-transfer button{width:100%;font-size:12px}
+ .finance-setup-footer .primary-btn{width:100%}
+ .finance-entry{padding:13px 12px;gap:8px}
+ .finance-entry-icon{height:30px;width:30px;flex-basis:30px}
+ .finance-entry-price{max-width:33%}
+}
+@media(prefers-reduced-motion:reduce){.finance-split>div{transition:none}}
