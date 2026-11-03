@@ -1,227 +1,164 @@
-/* LifeOS Bank Connections — opt-in, read-only, unobtrusive on Money screen. */
+/* LifeOS Money: read-only bank connection, private owner access, practical alerts. */
 (() => {
- 'use strict';
- if(typeof db==='undefined'||typeof render!=='function')return;
- const bank={config:null,summary:null,session:sessionStorage.getItem('lifeos.bankSession')||'',busy:false,error:'',
- tab:'overview',ready:false,lastFetched:0,linking:false};
- const fmt=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(n)||0);
- const clean=x=>safe(String(x??''));
- const date=x=>x?new Date(x).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'}):'Not updated yet';
- const timeAgo=x=>!x?'Never':Math.round((Date.now()-x)/60000)<2?'Just now':
- Math.round((Date.now()-x)/60000)<90?Math.round((Date.now()-x)/60000)+'m ago':
- Math.round((Date.now()-x)/3600000)<48?Math.round((Date.now()-x)/3600000)+'h ago':date(x);
- const escapeSelector=x=>String(x).replace(/["\\]/g,'');
- async function request(action,body={},session=bank.session){
-  const result=await fetch('/.netlify/functions/plaid',{method:'POST',headers:{'content-type':'application/json',...(session?{authorization:'Bearer '+session}:{})},
-   credentials:'same-origin',cache:'no-store',body:JSON.stringify({action,...body})});
-  const json=await result.json().catch(()=>({error:'Bank service returned an invalid response.'}));
-  if(!result.ok){
-   if(result.status===401){bank.session='';bank.summary=null;sessionStorage.removeItem('lifeos.bankSession');}
-   const error=new Error(json.error||'Bank service error');error.code=json.code;throw error;
-  }
-  return json;
+'use strict';
+const state={config:null,code:'',data:null,busy:false,msg:'',error:false,tab:'accounts',showAll:false};
+const clean=x=>safe(String(x??''));
+const dollars=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(n)||0);
+const date=x=>x?new Date(x).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Not yet';
+const path='/.netlify/functions/bank';
+async function send(action,extra={}){
+ const res=await fetch(path,{method:'POST',cache:'no-store',headers:{'content-type':'application/json','x-lifeos-owner-code':state.code},body:JSON.stringify({action,...extra})});
+ const data=await res.json().catch(()=>({error:'Bank response was unreadable'}));
+ if(!res.ok){const error=new Error(data.error||'Bank request failed');error.code=data.code;throw error;}
+ return data;
+}
+async function showConfig(){
+ try{const res=await fetch(path,{cache:'no-store'});state.config=await res.json();}
+ catch{state.config={configured:false};state.msg='Bank service is not reachable on this deployment.';state.error=true;}
+ draw();
+}
+function panel(){
+ const cfg=state.config;
+ let content='';
+ if(!cfg)content='<p class="fine">Checking bank connection availability…</p>';
+ else if(!cfg.configured)content='<div class="bank-start"><strong>Connect a bank when you are ready</strong><p>Plaid has not yet been configured in Netlify. All manual income, savings and expenses still work.</p>'+
+ '<a href="https://github.com/newlinj821-jpg/LifeOS/blob/main/docs/PLAID_SETUP.md" target="_blank" rel="noopener noreferrer">How to configure Plaid</a></div>';
+ else if(!state.code)content='<div class="bank-start"><strong>Unlock your banking view</strong><p>Enter the private owner code you configured in Netlify. It stays in app memory only, never in your LifeOS backup.</p>'+
+ '<form id="bankUnlock"><label for="bankOwnerCode">Private LifeOS bank owner code</label><div class="bank-form-row"><input class="field" id="bankOwnerCode" name="ownerCode" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" minlength="20" required placeholder="Enter private access code"><button class="primary-btn" type="submit">Unlock</button></div></form></div>';
+ else if(!state.data?.connected)content='<div class="bank-start"><strong>No bank connected yet</strong><p>Choose your checking or savings institution in Plaid. This is read-only: no transfer or withdrawal permission.</p><div class="bank-actions"><button class="primary-btn" data-bank="connect">Connect checking or savings</button><button class="outline-btn" data-bank="status">Refresh status</button><button class="ghost-btn" data-bank="lock">Lock</button></div></div>';
+ else {
+ const d=state.data,accounts=(d.items||[]).flatMap(i=>(i.accounts||[]).map(a=>({...a,institution:i.institution,itemId:i.id})));
+ const tx=d.transactions||[],va=tx.filter(x=>x.vaBenefit&&!x.pending),prefs=d.prefs||{};
+ const notifyState=d.delivery?.lastStatus||'Not paired';
+ content='<div class="bank-actions"><button class="outline-btn" data-bank="refresh">Refresh data</button><button class="outline-btn" data-bank="connect">Connect another bank</button><button class="ghost-btn" data-bank="lock">Lock bank view</button></div>'+
+ '<p class="bank-footnote">Last checked '+clean(date(d.lastSynced))+'. Plaid controls when each bank provides new transactions; this is not a live account stream.</p>'+
+ '<div class="bank-tabs">'+[['accounts','Accounts'],['activity','Activity'],['alerts','Alerts'],['manage','Manage']].map(([id,label])=>'<button class="'+(state.tab===id?'active':'')+'" data-bank-tab="'+id+'">'+label+'</button>').join('')+'</div>';
+ if(state.tab==='accounts'){
+  content+='<div class="bank-account-grid">'+accounts.map(a=>'<article class="bank-account"><small>'+clean(a.institution)+' · '+clean(a.subtype||a.type)+'</small><strong>'+clean(a.name)+' <span>••'+clean(a.mask)+'</span></strong><b>'+(a.current===null?'Unavailable':dollars(a.current))+'</b><small>Reported balance'+(a.available!==null?' · Available '+dollars(a.available):'')+'</small></article>').join('')+'</div>'+
+  '<div class="bank-stat-grid"><div><small>Recent deposits</small><strong>'+dollars(d.stats?.deposits)+'</strong></div><div><small>Recent spending</small><strong>'+dollars(d.stats?.spending)+'</strong></div><div><small>VA credits found</small><strong>'+va.length+'</strong></div></div>'+
+  '<p class="bank-footnote">Bank figures and manual monthly income/savings are separate. Recent totals cover the retained transaction sample, not necessarily one full month.</p>';
+ }else if(state.tab==='activity'){
+  content+=tx.length?'<div class="bank-transactions">'+tx.slice(0,state.showAll?80:12).map(t=>'<div class="bank-transaction"><div><strong>'+clean(t.vaBenefit?'VA benefits':t.name)+'</strong><small>'+clean(t.institution)+' · '+clean(t.date)+(t.pending?' · Pending':'')+'</small></div><b class="'+(t.amount<0?'bank-credit':'')+'">'+(t.amount<0?'+':'−')+dollars(Math.abs(t.amount))+'</b></div>').join('')+'</div><button class="outline-btn" data-bank="more">'+(state.showAll?'Show fewer':'Show more transactions')+'</button>':'<p class="fine">Plaid has not returned transaction history yet. Initial sync can take time.</p>';
+ }else if(state.tab==='alerts'){
+  content+='<form id="bankPrefs"><p class="fine">These alerts are event-triggered, not random reminders. They appear after new posted data reaches Plaid. Amounts are hidden from the lock screen by default.</p>'+
+   [['vaDeposits','VA benefits deposited','Notify when a new posted VA benefit credit is detected.'],
+    ['deposits','Other deposits','Notify on non-VA deposits, excluding transfers.'],
+    ['largePurchases','Large purchases','Alert when a posted purchase exceeds the threshold.'],
+    ['lowBalance','Low checking balance','Alert once on crossing below the chosen threshold.'],
+    ['showAmounts','Show amounts on lock screen','Optional; LifeOS private-preview mode overrides this.']].map(([name,label,sub])=>'<label class="bank-toggle"><span><strong>'+label+'</strong><small>'+sub+'</small></span><input name="'+name+'" type="checkbox" '+(prefs[name]?'checked':'')+'></label>').join('')+
+   '<div class="bank-two-fields"><label>Large purchase threshold ($)<input class="field" type="text" inputmode="decimal" name="largeAmount" value="'+clean(prefs.largeAmount||250)+'"></label>'+
+   '<label>Low balance threshold ($)<input class="field" type="text" inputmode="decimal" name="lowThreshold" value="'+clean(prefs.lowThreshold||100)+'"></label></div>'+
+   '<div class="bank-actions"><button class="primary-btn" type="submit">Save alert settings</button><button class="outline-btn" data-bank="pair">Enable bank alerts on this phone</button><button class="ghost-btn" data-bank="unpair">Stop bank push</button></div></form>'+
+   '<p class="bank-footnote">Delivery: '+clean(notifyState)+' · '+Number(d.queuedAlerts||0)+' queued. Provider acceptance does not prove the phone displayed an alert.</p>';
+ }else{
+  content+='<div class="bank-institution-list">'+(d.items||[]).map(i=>'<div class="bank-institution"><div><strong>'+clean(i.institution)+'</strong><small>Last checked '+clean(date(i.lastSynced))+(i.error?' · '+clean(i.error):'')+'</small></div><div class="bank-actions"><button class="outline-btn" data-bank="reconnect" data-item="'+clean(i.id)+'">Reconnect</button><button class="danger-btn" data-bank="remove" data-item="'+clean(i.id)+'">Disconnect</button></div></div>').join('')+'</div>';
  }
- function notify(message){bank.error=message;toast(message);refreshUI();}
- function lastSync(){const t=bank.summary?.updatedAt;return timeAgo(t);}
- function configure(){
-  if(bank.config&&!bank.config.configured)return '<section class="panel panel-pad bank-panel"><h2>Connect a bank, when you’re ready</h2>'+
-   '<p class="fine">Plaid is not configured yet. Your manual income, savings and expenses continue working without it.</p>'+
-   '<p class="bank-hint">Set the Plaid and private LifeOS bank keys in Netlify, then redeploy. No banking credentials go in GitHub.</p>'+
-   '<a href="https://github.com/newlinj821-jpg/LifeOS/blob/main/docs/PLAID_SETUP.md" target="_blank" rel="noopener">Plaid setup guide</a></section>';
-  return '<section class="panel panel-pad bank-panel"><div class="bank-section-head"><div><div class="eyebrow">OPTIONAL BANK CONNECTION</div><h2>Connect your checking and savings</h2></div><span class="bank-status">Read only</span></div>'+
-   '<p class="fine">Your bank information is kept in a private encrypted server vault. Manual budgets and savings never disappear.</p>'+
-   '<form id="lifeBankUnlock"><label for="bankSetupPassword">Private LifeOS bank access key</label>'+
-   '<input class="field" type="password" id="bankSetupPassword" name="password" autocomplete="off" required minlength="24" placeholder="Enter your LifeOS bank access key">'+
-   '<button class="primary-btn" type="submit">Unlock bank dashboard</button></form>'+
-   '<p class="bank-hint">This is the separate access key you set in Netlify—not your bank password or Plaid secret.</p></section>';
  }
- function accounts(){
-  const s=bank.summary,all=s.accounts||[];
-  return '<div class="bank-accounts">'+(all.length?all.map(x=>
-   '<div class="bank-account"><span><strong>'+clean(x.name||x.subtype||'Bank account')+'</strong>'+
-   '<small>'+clean(x.institution||'Connected bank')+' · '+clean(x.type||'Account')+' ·••'+clean(x.mask||'')+'</small></span>'+
-   '<strong>'+ (Number.isFinite(x.current)?fmt(x.current):'Balance unavailable')+'</strong></div>').join(''):
-   '<p class="fine">No accounts returned yet. Some banks take time to complete linking.</p>')+'</div>';
+ return '<section class="panel panel-pad bank-panel" id="bankPanel"><div class="bank-title"><div><div class="eyebrow">OPTIONAL · READ ONLY</div><h2>Bank connections</h2><p class="fine">Checking, savings, transactions and useful alerts alongside your manual budget.</p></div>'+
+ '<span class="bank-chip">'+(state.data?.connected?'Connected':'Private')+'</span></div>'+
+ (state.msg?'<div class="bank-notice '+(state.error?'bank-error':'')+'" role="status">'+clean(state.msg)+'</div>':'')+
+ (state.busy?'<p class="bank-working" role="status">Contacting bank service…</p>':'')+content+'</section>';
+}
+function draw(){
+ if(typeof currentPage!=='undefined'&&currentPage==='money'){
+  const main=document.querySelector('#view .finance-page');
+  if(!main)return;
+  const current=main.querySelector('#bankPanel');
+  if(current){current.outerHTML=panel();return;}
+  const anchor=main.querySelector('.finance-panels');
+  if(anchor)anchor.insertAdjacentHTML('beforebegin',panel());else main.insertAdjacentHTML('beforeend',panel());
  }
- function income(){
-  const p=bank.summary?.paychecks||{},monthly=bank.summary?.thisMonth||{},recent=p.latest;
-  return '<div class="bank-income-grid"><div><span>Paycheck / benefits detected</span><strong>'+(recent?fmt(recent.amount):'—')+'</strong>'+
-   '<small>'+(recent?'Last seen '+clean(recent.date):'No confirmed payroll deposits yet')+'</small></div>'+
-   '<div><span>Deposits this month</span><strong>'+fmt(monthly.deposits)+'</strong><small>Bank-reported posted credits; excludes identified transfers</small></div>'+
-   '<div><span>Deposit cadence</span><strong>'+clean(p.cadence||'Unknown')+'</strong><small>'+(p.nextEstimated?'Next estimated: '+clean(p.nextEstimated)+' (not guaranteed)':'Needs multiple historical deposits')+'</small></div></div>'+
-   '<p class="fine">LifeOS recognizes descriptions such as VACP TREAS 310 and XXVA BENEF. Other payroll can be added below. Bank deposits are shown separately from your manually entered monthly income to prevent double-counting.</p>';
- }
- function transactions(){
-  const list=bank.summary?.transactions||[];
-  return '<div class="bank-transactions">'+(list.length?list.slice(0,35).map(t=>{
-   const isCredit=t.amount<0;
-   return '<div class="bank-transaction"><span><strong>'+clean(t.title||'Transaction')+'</strong>'+
-    '<small>'+clean(t.date||'')+' · '+clean(t.institution||'Bank')+(t.pending?' · Pending':'')+'</small></span>'+
-    '<strong class="'+(isCredit?'bank-credit':'')+'">'+(isCredit?'+':'−')+fmt(Math.abs(t.amount))+'</strong></div>';
-  }).join(''):'<p class="fine">Transactions will appear once Plaid has retrieved them from your bank.</p>')+'</div>';
- }
- function preferences(){
-  const p=bank.summary?.bankAlerts||{};
-  return '<form id="bankAlertForm" class="bank-pref-form"><div class="bank-pref-intro"><h3>Useful notifications, not constant alerts</h3>'+
-   '<p class="fine">Paycheck notifications are the only alert enabled by default after you connect this phone. Nothing is sent for historical deposits, pending transactions, or routine balance changes.</p></div>'+
-   '<label><input type="checkbox" name="paycheck" '+(p.paycheck?'checked':'')+'> Tell me when a paycheck is reported</label>'+
-   '<label><input type="checkbox" name="otherDeposits" '+(p.otherDeposits?'checked':'')+'> Other posted deposits (optional)</label>'+
-   '<label><input type="checkbox" name="largeExpense" '+(p.largeExpense?'checked':'')+'> Unusually large purchases (optional)</label>'+
-   '<div class="bank-small-field"><label for="bankLargeAmount">Purchase alert amount</label><input class="field" id="bankLargeAmount" type="number" min="1" step="0.01" name="largeExpenseAmount" value="'+(p.largeExpenseAmount||300)+'"></div>'+
-   '<label><input type="checkbox" name="lowBalance" '+(p.lowBalance?'checked':'')+'> Checking account falls below a limit (optional)</label>'+
-   '<div class="bank-small-field"><label for="bankLowAmount">Low-balance limit</label><input class="field" type="number" min="1" step="0.01" id="bankLowAmount" name="lowBalanceAmount" value="'+(p.lowBalanceAmount||100)+'"></div>'+
-   '<label><input type="checkbox" name="showAmounts" '+(p.showAmounts?'checked':'')+'> Include dollar amounts on my lock screen</label>'+
-   '<div class="bank-small-field"><label for="bankMatch">Additional paycheck description to recognize</label>'+
-   '<input class="field" type="text" id="bankMatch" maxlength="45" name="paycheckMatches" value="'+clean((p.paycheckMatches||[]).join(', '))+'" placeholder="e.g. PAYROLL COMPANY">'+
-   '<small>Use commas to separate more than one. Benefit descriptors are automatically recognized.</small></div>'+
-   '<button class="outline-btn" type="submit">Save notification preferences</button>'+
-   '</form>';
- }
- function markup(){
-  if(!bank.ready)return '<section class="panel panel-pad bank-panel"><h2>Bank connection</h2><p class="fine">Checking bank configuration…</p></section>';
-  if(!bank.config?.configured||!bank.session||!bank.summary)return configure();
-  const s=bank.summary;
-  const controls='<div class="bank-actions"><button class="primary-btn" type="button" data-bank="connect">＋ Link bank</button>'+
-    '<button class="outline-btn" type="button" data-bank="refresh" '+(bank.busy?'disabled':'')+'>Refresh data</button>'+
-    '<button class="ghost-btn" type="button" data-bank="lock">Lock</button></div>';
-  const institutions=(s.institutions||[]).map(x=>
-   '<div class="bank-institution"><span><strong>'+clean(x.name)+'</strong>'+
-    '<small>Updated '+timeAgo(x.transactionsUpdatedAt||x.updatedAt)+(x.warning?' · '+clean(x.warning):'')+'</small></span>'+
-    '<button class="minor" type="button" data-bank-update="'+clean(x.id)+'">Reconnect</button>'+
-    '<button class="minor danger-btn" type="button" data-bank-remove="'+clean(x.id)+'">Disconnect</button></div>').join('');
-  return '<section class="panel panel-pad bank-panel"><div class="bank-section-head"><div><div class="eyebrow">BANK OVERVIEW</div><h2>Connected accounts</h2>'+
-    '<p class="fine">Private read-only access · Last updated '+lastSync()+'</p></div><span class="bank-status">'+clean(s.environment)+'</span></div>'+
-    controls+(bank.error?'<p class="bank-error" role="status">'+clean(bank.error)+'</p>':'')+
-    '<div class="bank-tabs">'+[['overview','Overview'],['income','Paychecks'],['activity','Activity'],['alerts','Alerts']].map(([id,label])=>
-      '<button class="'+(bank.tab===id?'active':'')+'" type="button" data-bank-tab="'+id+'">'+label+'</button>').join('')+'</div>'+
-    (bank.tab==='overview'?accounts()+income():bank.tab==='income'?income():bank.tab==='activity'?transactions():
-     '<div class="bank-alert-options">'+
-      '<div class="bank-alert-state"><strong>'+(s.pushConnected?'Bank alerts connected':'Bank alerts are off')+'</strong>'+
-      '<p class="fine">Notifications require a verified LifeOS push subscription. Quiet hours: 10 PM–8 AM. Maximum two bank alerts per day.</p>'+
-      (s.pushConnected?'<button class="outline-btn" type="button" data-bank="unlink-push">Turn off bank push</button>':
-       '<button class="primary-btn" type="button" data-bank="link-push">Connect phone notifications</button>')+'</div>'+
-      preferences()+'</div>')+
-    '<div class="bank-institutions">'+institutions+'</div>'+
-    '<p class="fine bank-footnote">Connected banks update in the background when Plaid reports activity, with periodic fallback checks. This is not instant bank data. Real-time paid Balance and Transactions Refresh add-ons are not enabled.</p></section>';
- }
- function refreshUI(){
-  if(currentPage!=='money')return;
-  const main=$('#view'),prior=main?.querySelector('#lifeBankMount');
-  if(prior)prior.innerHTML=markup();
- }
- const oldRender=render;
- render=function(){
-  oldRender();
-  if(currentPage==='money'){
-   const here=$('#view .finance-panels');
-   if(here&&!$('#lifeBankMount'))here.insertAdjacentHTML('afterend','<div id="lifeBankMount">'+markup()+'</div>');
-   if(!bank.ready)init();
-  }
- };
- let inFlight=false;
- async function init(){
-  if(inFlight||bank.ready)return;
-  inFlight=true;
-  try{
-   bank.config=await request('config',{},'');
-   bank.ready=true;
-   if(bank.session){
-    try{const x=await request('status');bank.summary=x.summary;}
-    catch{bank.session='';sessionStorage.removeItem('lifeos.bankSession');}
-   }
-  }catch(e){bank.ready=true;bank.error=String(e.message||e);}
-  finally{inFlight=false;refreshUI();}
- }
- async function run(action,body={}){
-  if(bank.busy)return;
-  bank.busy=true;bank.error='';refreshUI();
-  try{
-   const result=await request(action,body);
-   if(result.summary)bank.summary=result.summary;
-   if(action==='refresh')toast('Bank data checked. '+(result.warnings?.length?'Some connections need attention.':'Up to date with Plaid’s latest available data.'));
-   if(action==='link-notifications')toast('Bank alerts connected to this phone. Paycheck alerts are enabled.');
-   if(action==='unlink-notifications')toast('Bank push alerts turned off.');
-  }catch(e){notify(e.message||'Bank request failed.');}
-  finally{bank.busy=false;refreshUI();}
- }
- function loadPlaidScript(){
-  if(window.Plaid?.create)return Promise.resolve();
-  return new Promise((resolve,reject)=>{
-   let script=document.querySelector('script[data-life-plaid]');
-   if(script){script.addEventListener('load',resolve,{once:true});script.addEventListener('error',()=>reject(Error('Plaid Link could not load.')),{once:true});return;}
-   script=document.createElement('script');script.src='https://cdn.plaid.com/link/v2/stable/link-initialize.js';
-   script.async=true;script.dataset.lifePlaid='1';script.onload=resolve;
-   script.onerror=()=>reject(Error('Plaid Link could not load. Check your connection.'));
-   document.head.append(script);
+}
+async function read(){
+ if(!state.code)return;
+ state.busy=true;draw();
+ try{state.data=await send('status');state.msg='';state.error=false;}
+ catch(e){state.msg=e.message;state.error=true;if(e.code==='OWNER_REQUIRED')state.code='';}
+ finally{state.busy=false;draw();}
+}
+async function action(name,extra={}){
+ state.busy=true;state.msg='';draw();
+ try{
+  const res=await send(name,extra);
+  if(name==='preferences')state.data.prefs=res.prefs;
+  else if(name==='attach-push')state.msg='This verified phone can now receive new bank alerts.';
+  else if(name==='detach-push')state.msg='Bank push alerts turned off for this phone.';
+  else if(name==='remove'){state.data=res;state.msg='Bank disconnected.';state.tab='accounts';}
+  else{state.data=res;state.msg=name==='refresh'?'Bank check completed.':'Bank connection updated.';}
+  state.error=false;
+ }catch(e){state.error=true;state.msg=e.message;}
+ finally{state.busy=false;draw();}
+}
+let scriptReady=null;
+async function plaidScript(){
+ if(window.Plaid?.create)return;
+ if(!scriptReady)scriptReady=new Promise((resolve,reject)=>{const s=document.createElement('script');
+  s.src='https://cdn.plaid.com/link/v2/stable/link-initialize.js';s.async=true;
+  s.onload=()=>window.Plaid?.create?resolve():reject(Error('Plaid Link did not initialize.'));
+  s.onerror=()=>reject(Error('Plaid Link could not load. Check network and blockers.'));document.head.append(s);});
+ return scriptReady;
+}
+async function connect(itemId){
+ if(state.busy)return;state.busy=true;state.msg='Opening Plaid Link…';draw();
+ try{
+  const data=await send(itemId?'update-link':'link',itemId?{itemId}:{});
+  await plaidScript();
+  const handler=window.Plaid.create({token:data.linkToken,
+   onSuccess:async(publicToken,metadata)=>{
+    if(itemId)await action('refresh');
+    else await action('exchange',{publicToken,institution:metadata?.institution?.name||'Connected bank'});
+    handler.destroy?.();
+   },
+   onExit:err=>{if(err){state.error=true;state.msg=String(err.display_message||err.error_message||'Plaid Link was cancelled').slice(0,160);}handler.destroy?.();draw();}
   });
+  handler.open();
+ }catch(e){state.msg=e.message;state.error=true;}
+ finally{state.busy=false;draw();}
+}
+async function pair(){
+ try{
+  if(!pushEnabled)throw Error('First enable and verify notifications under LifeOS Settings.');
+  const sub=await navigator.serviceWorker.ready.then(r=>r.pushManager.getSubscription());
+  if(!sub)throw Error('No active push subscription. Reconnect notifications first.');
+  await action('attach-push',{subscription:sub.toJSON(),manageToken:getManageToken()});
+ }catch(e){state.msg=e.message;state.error=true;draw();}
+}
+const previousRender=render;
+render=function(){previousRender();draw();};
+document.addEventListener('submit',async e=>{
+ if(e.target.id==='bankUnlock'){
+  e.preventDefault();
+  const code=String(e.target.elements.namedItem('ownerCode')?.value||'').trim();
+  if(code.length<20){state.error=true;state.msg='Enter the full private banking access code.';draw();return;}
+  state.code=code;await read();return;
  }
- async function link(updateItemId){
-  if(bank.busy||bank.linking)return;
-  bank.linking=true;bank.error='';refreshUI();
-  try{
-   await loadPlaidScript();
-   const data=await request('link-token',updateItemId?{updateItemId}:{});
-   const handler=window.Plaid.create({token:data.linkToken,
-    onSuccess:async(publicToken,metadata)=>{
-     try{
-      if(updateItemId){await run('refresh');toast('Bank reconnected.');}
-      else{await run('exchange',{publicToken,institution:metadata?.institution?.name||'Connected bank'});await run('refresh');}
-     }catch(e){notify(e.message||'Unable to finish linking.');}
-     finally{handler.destroy?.();}
-    },
-    onExit:(err)=>{if(err)notify('Plaid connection ended: '+(err.display_message||err.error_message||'Try again.'));handler.destroy?.();},
-    onLoad:()=>{}
-   });
-   handler.open();
-  }catch(error){notify(String(error.message||error));}
-  finally{bank.linking=false;refreshUI();}
- }
- async function pairPush(){
-  try{
-   if(!('serviceWorker' in navigator))throw Error('Install LifeOS and enable notifications in Settings first.');
-   const registration=await navigator.serviceWorker.ready,sub=await registration.pushManager.getSubscription();
-   const manageToken=localStorage.getItem('lifeos.pushToken');
-   if(!sub||!manageToken)throw Error('Enable and verify regular LifeOS notifications in Settings before connecting bank alerts.');
-   await run('link-notifications',{subscription:sub.toJSON(),manageToken});
-  }catch(e){notify(e.message||'Cannot connect notifications.');}
- }
- document.addEventListener('submit',async event=>{
-  if(event.target.id==='lifeBankUnlock'){
-   event.preventDefault();const input=event.target.querySelector('#bankSetupPassword'),key=input?.value||'';
-   if(key.length<24){notify('Enter your private LifeOS bank access key from Netlify.');return;}
-   input.value='';
-   try{bank.busy=true;refreshUI();const result=await request('unlock',{setupKey:key},'');
-    bank.session=result.session;sessionStorage.setItem('lifeos.bankSession',bank.session);
-    bank.summary=result.summary;bank.error='';bank.tab='overview';toast('Bank dashboard unlocked.');
-   }catch(e){bank.error=e.message||'Unlock failed.';}
-   finally{bank.busy=false;refreshUI();}
-  }else if(event.target.id==='bankAlertForm'){
-   event.preventDefault();
-   const f=new FormData(event.target);
-   const values={
-    paycheck:f.has('paycheck'),otherDeposits:f.has('otherDeposits'),
-    largeExpense:f.has('largeExpense'),largeExpenseAmount:Number(f.get('largeExpenseAmount')),
-    lowBalance:f.has('lowBalance'),lowBalanceAmount:Number(f.get('lowBalanceAmount')),
-    showAmounts:f.has('showAmounts'),
-    paycheckMatches:String(f.get('paycheckMatches')||'').split(',').map(x=>x.trim()).filter(Boolean)
-   };
-   await run('notification-prefs',{prefs:values});toast('Notification preferences saved.');
+ if(e.target.id==='bankPrefs'){
+  e.preventDefault();const form=e.target,f=new FormData(form);
+  const amount=x=>String(form.elements.namedItem(x)?.value||'').trim();
+  if(!LifeOSFinanceCore.validAmount(amount('largeAmount'))||!LifeOSFinanceCore.validAmount(amount('lowThreshold'))){
+   state.error=true;state.msg='Enter valid numeric thresholds before saving.';draw();return;
   }
- });
- document.addEventListener('click',async e=>{
-  if(currentPage!=='money')return;
-  const tab=e.target.closest('[data-bank-tab]');
-  if(tab){bank.tab=tab.dataset.bankTab;refreshUI();return;}
-  const update=e.target.closest('[data-bank-update]');if(update){await link(update.dataset.bankUpdate);return;}
-  const remove=e.target.closest('[data-bank-remove]');
-  if(remove){if(confirm('Disconnect this bank and remove its saved transactions from LifeOS? Your manually entered budget stays intact.'))await run('disconnect',{itemId:remove.dataset.bankRemove});return;}
-  const button=e.target.closest('[data-bank]');if(!button)return;
-  const action=button.dataset.bank;
-  if(action==='connect')await link();
-  if(action==='refresh')await run('refresh');
-  if(action==='link-push')await pairPush();
-  if(action==='unlink-push')await run('unlink-notifications');
-  if(action==='lock'){try{await request('lock');}catch{}
-   bank.session='';bank.summary=null;sessionStorage.removeItem('lifeos.bankSession');refreshUI();toast('Bank dashboard locked.');}
- });
+  await action('preferences',{preferences:{vaDeposits:f.has('vaDeposits'),deposits:f.has('deposits'),
+   largePurchases:f.has('largePurchases'),largeAmount:LifeOSFinanceCore.amount(amount('largeAmount')),
+   lowBalance:f.has('lowBalance'),lowThreshold:LifeOSFinanceCore.amount(amount('lowThreshold')),
+   showAmounts:f.has('showAmounts')}});
+ }
+});
+document.addEventListener('click',async e=>{
+ const t=e.target.closest('[data-bank]');if(!t||state.busy)return;
+ const a=t.dataset.bank,itemId=t.dataset.item||'';
+ if(a==='connect'||a==='reconnect')await connect(a==='reconnect'?itemId:'');
+ if(a==='status')await read();
+ if(a==='refresh')await action('refresh');
+ if(a==='pair')await pair();
+ if(a==='unpair')await action('detach-push');
+ if(a==='more'){state.showAll=!state.showAll;draw();}
+ if(a==='lock'){state.code='';state.data=null;state.msg='Bank view locked. Background synchronization continues on the server.';draw();}
+ if(a==='remove'&&confirm('Disconnect this institution and stop its future updates?'))await action('remove',{itemId});
+});
+document.addEventListener('click',e=>{
+ const t=e.target.closest('[data-bank-tab]');if(!t)return;
+ state.tab=t.dataset.bankTab;draw();
+});
+showConfig();
 })();
