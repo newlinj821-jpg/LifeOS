@@ -29,7 +29,7 @@ export default async function handler(request){
  catch(e){console.warn('LifeOS rejected unverified Plaid webhook',String(e.message).slice(0,100));return res(401,'Unverified webhook');}
  let event;
  try{event=JSON.parse(raw);}catch{return res(400,'Malformed JSON');}
- if(event.environment!==currentEnvironment())return res(202,'Environment ignored');
+ if(event.environment&&event.environment!==currentEnvironment())return res(202,'Environment ignored');
  if(event.webhook_type!=='TRANSACTIONS'||event.webhook_code!=='SYNC_UPDATES_AVAILABLE')return res(202,'Ignored');
  const id=String(event.item_id||'');
  try{
