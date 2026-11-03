@@ -27,7 +27,7 @@ export function notification(r,privateMode){
  return {
   title:privateMode?'LifeOS · '+category:r.lead?'Upcoming '+category.toLowerCase()+': '+r.title:'LifeOS · '+category+': '+r.title,
   body:privateMode?'Your '+category.toLowerCase()+' reminder is due. Open LifeOS for details.':(timing+' · '+category+(details?' · '+details:' · Open LifeOS to review, complete or reschedule.')).slice(0,290),
-  url:'/#reminders?focus='+encodeURIComponent(r.id),
+  url:'/#reminders',
   tag:'lifeos-'+r.id,
   priority:r.priority
  };
