@@ -37,7 +37,7 @@ const KIND={
 };
 const SECTION_KINDS={planner:['task'],calendar:['event'],routines:['habit'],fitness:['workout'],food:['meal'],money:['bill'],home:['chore'],pets:['pet'],wellness:['checkin'],projects:['project'],goals:['goal'],vault:['note'],journal:['journal'],reminders:['reminder']};
 const $=sel=>document.querySelector(sel);
-let currentPage='today', filter='all', keyword='', selectedDay=dayKey(new Date()), calendarCursor=new Date(), config={}, pushEnabled=false, toastHandle=0, pendingSync=false;
+let currentPage='today', filter='all', keyword='', selectedDay=dayKey(new Date()), calendarCursor=new Date(), config={}, pushEnabled=false, pushIssue='', toastHandle=0, pendingSync=false;
 const defaults=()=>({version:1,items:[],water:{},settings:{name:'',theme:'dark',budget:0,lowEnergy:false,hidden:[],dailyWater:8,privatePush:false,quietEnabled:false,quietStart:'22:00',quietEnd:'07:00'},fired:{},createdAt:Date.now()});
 function load(){try{const obj=JSON.parse(localStorage.getItem(STORE));if(obj&&Array.isArray(obj.items))return {...defaults(),...obj,settings:{...defaults().settings,...obj.settings}};}catch(e){}return defaults();}
 let db=load();
@@ -172,7 +172,7 @@ function insightsPage(){
 function settingsPage(){
  const s=db.settings,modules=Object.entries(META).filter(([k])=>!['today','settings'].includes(k));
  const configured=!!(config.configured&&config.publicKey);
- const status=pushEnabled?'Background push is connected to this device. LifeOS automatically syncs enabled reminders.':!configured?'The notification service needs its three VAPID settings added to Netlify before lock-screen push can work.':'The notification service is ready. Enable push from your device; on iPhone, open LifeOS from its Home Screen icon.';
+ const status=pushIssue||(pushEnabled?'This phone is registered. Send a test to verify that notifications are delivered.':!configured?'The notification service is not configured in Netlify yet.':'Notifications are not connected to this phone. Enable them from the installed LifeOS app.');
  const moduleLines=modules.map(([k,v])=>'<label class="toggle-line"><div><strong>'+v.icon+' '+v.label+'</strong><p>'+safe(v.desc)+'</p></div><input class="toggle" type="checkbox" data-module="'+k+'" '+(!s.hidden.includes(k)?'checked':'')+'></label>').join('');
  return header('Settings','Your personal preferences, privacy controls and notification delivery.')+
  '<div class="settings-grid"><section class="panel panel-pad"><h2>Personalize LifeOS</h2><p class="fine" style="margin:7px 0 14px">Choose a display name, preferred color theme and personal targets.</p><div class="modal-grid"><div class="form-group"><label for="settingName">Display name</label><input id="settingName" class="field" maxlength="45" value="'+safe(s.name)+'" placeholder="Your name"></div><div class="form-group"><label for="settingTheme">Appearance</label><select id="settingTheme" class="field"><option value="dark" '+(s.theme==='dark'?'selected':'')+'>Midnight dark</option><option value="light" '+(s.theme==='light'?'selected':'')+'>Daylight light</option></select></div><div class="form-group"><label for="settingBudget">Monthly budget ($)</label><input id="settingBudget" class="field" type="number" min="0" step=".01" value="'+(s.budget||0)+'"></div><div class="form-group"><label for="settingWater">Water target (servings)</label><input id="settingWater" class="field" type="number" min="1" max="30" value="'+(s.dailyWater||8)+'"></div></div><div class="button-row">'+btn('Save preferences','save-settings')+'</div><div class="hr"></div><label class="toggle-line"><div><strong>Low-energy mode</strong><p>Offer a smaller, more forgiving daily focus.</p></div><input type="checkbox" class="toggle" data-setting="lowEnergy" '+(s.lowEnergy?'checked':'')+'></label></section>'+
@@ -295,41 +295,61 @@ async function loadConfig(){
 async function pushRequest(body){
  const r=await fetch('/.netlify/functions/push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
  let d={};try{d=await r.json();}catch(e){}
- if(!r.ok)throw Error(d.error||'Notification server returned '+r.status);
+ if(!r.ok){const error=new Error(d.error||'Notification server returned '+r.status);error.code=d.code||'PUSH_ERROR';error.status=r.status;throw error;}
  return d;
 }
 function urlBase64ToUint8Array(s){const pad='='.repeat((4-s.length%4)%4);const raw=atob((s+pad).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(raw,c=>c.charCodeAt(0));}
 async function getPushSub(){const reg=await navigator.serviceWorker.ready;return reg.pushManager.getSubscription();}
+function pushKeyMatches(sub){
+ if(!sub||!config.publicKey)return false;
+ try{
+  if(!sub.options?.applicationServerKey)return true;
+  const expected=urlBase64ToUint8Array(config.publicKey),actual=new Uint8Array(sub.options.applicationServerKey);
+  return expected.length===actual.length&&actual.every((value,index)=>value===expected[index]);
+ }catch{return false;}
+}
+function pushAuthFailure(error){
+ if(!['DEVICE_UNAUTHORIZED','DEVICE_TOKEN_MISMATCH','PUSH_EXPIRED'].includes(error?.code))return false;
+ pushEnabled=false;pushIssue='This phone needs to reconnect notifications. Open Connection options and choose Reconnect this device.';render();return true;
+}
 function pushPayload(action,sub){return {action,subscription:sub.toJSON(),manageToken:getManageToken(),reminders:pushItems(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,quiet:{enabled:!!db.settings.quietEnabled,start:db.settings.quietStart||'22:00',end:db.settings.quietEnd||'07:00'},privateMode:!!db.settings.privatePush};}
 async function enablePush(){
  try{
-  if(!config.configured||!config.publicKey)throw Error('Push server is not configured. Set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT in Netlify.');
-  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window))throw Error('Web Push is not available here. On iPhone, add the website to your Home Screen first.');
-  if(/iPhone|iPad|iPod/.test(navigator.userAgent)&&!window.matchMedia('(display-mode: standalone)').matches&&!navigator.standalone)throw Error('On iPhone, open LifeOS from its installed Home Screen icon to enable push notifications.');
+  if(!config.configured||!config.publicKey)throw Error('Notifications are not configured on the server. Check Netlify settings.');
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window))throw Error('Web Push requires a supported browser. On iPhone, install LifeOS to the Home Screen first.');
+  if(/iPhone|iPad|iPod/.test(navigator.userAgent)&&!window.matchMedia('(display-mode: standalone)').matches&&!navigator.standalone)throw Error('Open LifeOS from its Home Screen icon to enable iPhone notifications.');
   const permission=await Notification.requestPermission();
-  if(permission!=='granted')throw Error('Notification permission was denied. Review browser or device notification settings.');
+  if(permission!=='granted')throw Error('Notification permission is off. Check your phone notification settings.');
   const reg=await navigator.serviceWorker.ready;
-  const subscription=await reg.pushManager.getSubscription()||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(config.publicKey)});
+  let subscription=await reg.pushManager.getSubscription();
+  if(subscription&&!pushKeyMatches(subscription)){
+   await subscription.unsubscribe();subscription=null;localStorage.removeItem('lifeos.pushToken');
+  }
+  subscription=subscription||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(config.publicKey)});
   const d=await pushRequest(pushPayload('subscribe',subscription));
-  localStorage.setItem('lifeos.pushToken',d.manageToken);pushEnabled=true;render();toast('Push is active. '+d.reminderCount+' detailed reminders synced.');
- }catch(e){toast(String(e.message||e));}
+  localStorage.setItem('lifeos.pushToken',d.manageToken);pushEnabled=true;pushIssue='';render();
+  toast('Phone connected. '+d.reminderCount+' reminders synced. Try Send a test.');
+ }catch(e){pushAuthFailure(e);toast(String(e.message||e));}
 }
 async function disablePush(){
  try{
   const sub=await getPushSub();
   if(sub){await pushRequest(pushPayload('unsubscribe',sub));await sub.unsubscribe();}
-  localStorage.removeItem('lifeos.pushToken');pushEnabled=false;render();toast('Push subscription and cloud schedules removed for this device.');
+  localStorage.removeItem('lifeos.pushToken');pushEnabled=false;pushIssue='';render();toast('Notifications disconnected from this phone.');
  }catch(e){toast('Could not disable push: '+String(e.message||e));}
 }
 async function repairPush(){
- if(!confirm('Repair this device? Its old push subscription will be removed locally. This may leave an inaccessible old server subscription if its management token was lost.'))return;
  try{
+  if(!config.configured)throw Error('Set up notification keys in Netlify first.');
   const sub=await getPushSub();
-  if(sub&&getManageToken()){try{await pushRequest(pushPayload('unsubscribe',sub));}catch(e){}}
+  if(sub&&getManageToken()){
+   try{await pushRequest(pushPayload('unsubscribe',sub));}
+   catch(e){console.warn('Previous subscription could not be revoked. Reconnecting locally.');}
+  }
   if(sub)await sub.unsubscribe();
-  localStorage.removeItem('lifeos.pushToken');pushEnabled=false;
+  localStorage.removeItem('lifeos.pushToken');pushEnabled=false;pushIssue='Reconnecting this device…';render();
   await enablePush();
- }catch(e){toast('Repair failed: '+String(e.message||e));}
+ }catch(e){pushEnabled=false;pushIssue='Reconnection failed. Check notification permission and try again.';render();toast(String(e.message||e));}
 }
 let syncTimer;
 function syncReminder(){if(!pushEnabled)return;clearTimeout(syncTimer);syncTimer=setTimeout(()=>syncAllReminders(true),450);}
@@ -341,7 +361,7 @@ async function syncAllReminders(silent=false){
   const d=await pushRequest(pushPayload('sync',sub));
   if(d.manageToken)localStorage.setItem('lifeos.pushToken',d.manageToken);
   if(!silent)toast('Synced '+d.reminderCount+' enabled schedules to this device.');
- }catch(e){toast('Schedule sync failed: '+String(e.message||e));}
+ }catch(e){pushAuthFailure(e);if(!silent)toast('Schedule sync failed: '+String(e.message||e));}
 }
 async function sendTestNotification(){
  try{
@@ -354,16 +374,19 @@ async function sendTestNotification(){
   const reg=await navigator.serviceWorker.ready;
   await reg.showNotification('LifeOS · Local notification test',{body:'Notifications can appear while LifeOS is available. Enable background push for scheduled alerts even when it is closed.',icon:'/icon.svg',tag:'lifeos-test'});
   toast('Local test sent. This does not test background delivery.');
- }catch(e){toast(String(e.message||e));}
+ }catch(e){pushAuthFailure(e);toast(String(e.message||e));}
 }
 async function checkPushStatus(){
- if(!('serviceWorker' in navigator)||!('PushManager' in window)||!config.configured)return;
+ if(!('serviceWorker' in navigator)||!('PushManager' in window)||!config.configured){pushEnabled=false;render();return;}
  try{
   const sub=await getPushSub();
-  if(!sub||!getManageToken()){pushEnabled=false;render();return;}
+  if(!sub||!getManageToken()){
+   pushEnabled=false;pushIssue=sub?'An earlier subscription lost its authorization. Reconnect this device.':'';render();return;
+  }
+  if(!pushKeyMatches(sub)){pushEnabled=false;pushIssue='Notification keys changed. Reconnect this device.';render();return;}
   const d=await pushRequest(pushPayload('status',sub));
-  pushEnabled=Boolean(d.enrolled);render();
- }catch(e){pushEnabled=false;render();}
+  pushEnabled=Boolean(d.enrolled);pushIssue=pushEnabled?'':'The server could not verify this device. Reconnect notifications.';render();
+ }catch(e){pushEnabled=false;pushIssue='Cannot verify notifications right now. Retry or reconnect the device.';render();}
 }
 function del(id){const obj=db.items.find(x=>x.id===id);if(!obj||!confirm('Delete "'+obj.title+'"? This cannot be undone.'))return;db.items=db.items.filter(x=>x.id!==id);$('#entryDialog').close();save();if(obj.alert)syncReminder({...obj,alert:false});toast('Entry deleted.');}
 document.addEventListener('click',e=>{
