@@ -280,7 +280,7 @@ function pushItems(){
   return {id:it.id,title:it.title,details:[notificationContext(it).join(' · '),it.details||it.notes||''].filter(Boolean).join(' · ').slice(0,180),date:dayKey(when),time:localDateTime(when).slice(11),repeat:it.repeat||'none',kind,lead:Number(it.leadMinutes)||0,priority:it.priority==='Urgent'?'high':it.priority==='High'?'high':'normal',enabled:true};
  }).filter(it=>it.date&&it.time);
 }
-async async function loadConfig(){
+async function loadConfig(){
  try{const r=await fetch('/.netlify/functions/push',{cache:'no-store'});if(r.ok)config=await r.json();}catch(e){}
  render();
 }
