@@ -1,6 +1,6 @@
 [build]
-  command = "npm install --no-audit --no-fund && mkdir -p public && cp index.html app.js enhancements.js mode-core.js simplicity.js styles.css simplicity.css sw.js manifest.webmanifest icon.svg public/"
-  publish = "public"
+  command = "npm install --no-audit --no-fund && npm run build"
+  publish = "dist"
   functions = "netlify/functions"
 
 [functions]
