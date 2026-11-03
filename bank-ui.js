@@ -27,6 +27,27 @@
    '<div><span>Estimated pay schedule</span><strong>'+clean(income.cadence||'Unknown')+'</strong><small>'+(income.nextEstimated?'Estimated next: '+clean(income.nextEstimated):'Needs multiple matching deposits')+'</small></div></div>'+
    '<p class="fine">Expected pay is classified separately from ordinary deposits. Monthly income and savings in your manual LifeOS budget stay editable and are not double counted.</p>';
  }
+ function balanceCards(){
+  const totals=window.LifeOSBankBalances?.summarize(state.summary?.accounts)||{};
+  const linked=Number(state.summary?.connected||0)>0;
+  const card=(kind,label)=>{
+   const data=totals[kind]||{balance:null,accounts:0};
+   const known=typeof data.balance==='number'&&Number.isFinite(data.balance);
+   const explanation=known?(data.stale?'Previously reported · refresh pending':'Plaid-reported · may be cached'):
+    linked?'Waiting for account balance':'Connect a bank to see balance';
+   const detail=data.accounts===1?
+    [data.institution,data.name,data.mask?'••'+data.mask:''].filter(Boolean).join(' · '):
+    data.accounts>1?data.accounts+' '+label.toLowerCase()+' accounts combined':'No '+label.toLowerCase()+' account linked';
+   return '<article class="bank-balance-card bank-balance-'+kind+'">'+
+    '<div class="bank-balance-top"><strong>'+label+'</strong><span>'+ (kind==='checking'?'Daily money':'Set-aside money')+'</span></div>'+
+    '<div class="bank-balance-value">'+(known?money(data.balance):'—')+'</div>'+
+    '<p class="bank-balance-account">'+clean(detail)+'</p>'+
+    '<small>'+clean(explanation)+(data.lastReportedAt?' · '+clean(when(data.lastReportedAt)):'')+'</small>'+
+    '</article>';
+  };
+  return '<section class="bank-balance-overview" aria-label="Checking and savings account balances">'+
+   card('checking','Checking')+card('savings','Savings')+'</section>';
+ }
  function accounts(){
   const all=state.summary?.accounts||[];
   return '<div class="bank-accounts">'+(all.length?all.map(x=>
@@ -91,6 +112,7 @@
    '<div class="bank-actions"><button class="primary-btn" type="button" data-bank="connect">＋ Connect bank</button>'+
    '<button class="outline-btn" type="button" data-bank="refresh">Refresh data</button>'+
    '<button class="ghost-btn" type="button" data-bank="lock">Lock</button></div>'+
+   balanceCards()+
    '<div class="bank-tabs">'+[['accounts','Accounts'],['paychecks','Paychecks'],['activity','Activity'],['alerts','Alerts'],['manage','Manage']].map(([k,v])=>
    '<button type="button" data-bank-tab="'+k+'" class="'+(state.tab===k?'active':'')+'">'+v+'</button>').join('')+'</div>'+
    (state.tab==='accounts'?accounts()+cashflow():state.tab==='paychecks'?cashflow()+alerts():state.tab==='activity'?activity():state.tab==='alerts'?alerts():institutions())+
@@ -153,8 +175,8 @@
  }
  async function finishLink(publicToken,metadata,updateItemId,handler){
   try{
-   if(updateItemId){await run('refresh');toast('Bank connection updated.');}
-   else{await run('exchange',{publicToken,institution:metadata?.institution?.name||'Bank'});await run('refresh');}
+   if(updateItemId){await run('refresh');toast('Bank authorization updated.');}
+   else{await run('exchange',{publicToken,institution:metadata?.institution?.name||'Bank'});}
   }finally{clearOAuth();handler.destroy?.();}
  }
  function createHandler(token,updateItemId='',receivedRedirectUri=''){
