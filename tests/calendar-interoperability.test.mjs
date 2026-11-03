@@ -67,6 +67,10 @@ test('ICS import parses UTC and timezone-tagged events with a bounded size',()=>
  assert.equal(imported[0].duration,60);
  assert.throws(()=>parseICS('Not a calendar'),/valid/);
  assert.deepEqual(validatePublished([{id:'bad',startUTC:'invalid',endUTC:'invalid'}]),[]);
+ const quoted=text.replace('TZID=America/Chicago','TZID="America/Chicago"');
+ assert.equal(parseICS(quoted).length,1);
+ const invalid=text.replace('20261202T090000','20260231T090000');
+ assert.equal(parseICS(invalid).length,0);
 });
 test('Installed web app includes exactly one calendar script and all mobile assets',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
