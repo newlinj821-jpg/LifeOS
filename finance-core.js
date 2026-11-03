@@ -8,7 +8,7 @@
     if(typeof v==='number')return Number.isFinite(v)&&v>=0&&v<=100000000?v:null;
     if(typeof v!=='string')return null;
     const text=v.trim().replace(/^\$/,'').replace(/,/g,'').trim();
-    if(!/^(?:\d+)(?:\.\d{0,2})?$/.test(text))return null;
+    if(!/^(?:\d+)(?:\.\d{0,4})?$/.test(text))return null;
     const value=Number(text);
     return Number.isFinite(value)&&value>=0&&value<=100000000?value:null;
   };
