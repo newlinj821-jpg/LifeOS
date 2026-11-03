@@ -122,3 +122,51 @@
 @media(max-width:780px){.money-shortcuts{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.money-shortcuts button{min-height:85px}}
 
 .finance-entry-group{padding-bottom:6px}.finance-entry-group h3{font-size:12px;letter-spacing:.4px;color:var(--accent);padding:14px 16px 10px;background:var(--panel2);border-top:1px solid var(--line)}.finance-entry-group .finance-entry:first-of-type{border-top:0}
+
+
+/* LifeOS Money: bank status first, one clear monthly calculation below. */
+.life-money-bank-intro{display:flex;flex-direction:column;gap:5px;margin:0;padding-top:4px}
+.life-money-bank-intro h2{font-size:18px}
+.life-money-bank-intro p{font-size:12px;color:var(--muted);line-height:1.5}
+.finance-page .finance-panels[hidden]{display:none!important}
+.life-budget-plan{border:1px solid var(--line);border-radius:17px;background:var(--panel);padding:18px;display:flex;flex-direction:column;gap:17px;min-width:0}
+.life-budget-period{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.life-budget-period h2{font-size:19px;margin-bottom:5px}
+.life-budget-answer{border:1px solid rgba(177,143,245,.48);background:linear-gradient(135deg,rgba(162,130,248,.15),rgba(162,130,248,.035));border-radius:14px;padding:21px;display:flex;flex-direction:column;gap:7px}
+.life-budget-answer span{font-size:13px;color:var(--muted)}
+.life-budget-answer strong{font-size:clamp(30px,7vw,43px);font-variant-numeric:tabular-nums;letter-spacing:-1px}
+.life-budget-answer small{font-size:12px;color:var(--muted)}
+.life-budget-math{display:flex;flex-direction:column;gap:0}
+.life-budget-math>div{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid var(--line);font-size:13px}
+.life-budget-math>div span{color:var(--muted)}
+.life-budget-math>div strong{font-variant-numeric:tabular-nums}
+.life-budget-actions{display:flex;flex-wrap:wrap;gap:9px}
+.life-budget-actions button{min-height:43px}
+.life-budget-groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.life-budget-group{border:1px solid var(--line);border-radius:13px;padding:13px;min-width:0}
+.life-budget-group-head{display:flex;justify-content:space-between;gap:8px;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.life-budget-group-head h3{font-size:13px}
+.life-budget-group-head>strong{font-size:13px;font-variant-numeric:tabular-nums}
+.life-budget-row{display:flex;align-items:center;gap:8px;min-width:0;padding:10px 0;border-bottom:1px solid var(--line)}
+.life-budget-row:last-child{border-bottom:0}
+.life-budget-row>button:first-child{min-width:0;flex:1;background:none;color:var(--text);border:0;text-align:left;padding:0}
+.life-budget-row>button:first-child strong,.life-budget-row>button:first-child small{display:block;overflow-wrap:anywhere}
+.life-budget-row>button:first-child small{font-size:10px;color:var(--muted);margin-top:4px}
+.life-budget-row>strong{font-size:12px;font-variant-numeric:tabular-nums}
+.life-budget-edit{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:7px;font-size:11px}
+.life-budget-empty{padding:15px 0 5px}
+.life-budget-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;gap:12px;margin:12px 0}
+.life-budget-form label{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:700}
+.life-budget-form>button{min-height:44px}
+.life-savings-note{border:1px solid var(--line);border-radius:13px;padding:15px;background:var(--panel);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.life-savings-note>div{display:flex;flex-direction:column;gap:6px}
+.life-savings-note span{font-size:12px;color:var(--muted)}
+@media(max-width:900px){.life-budget-groups{grid-template-columns:1fr}.life-budget-form{grid-template-columns:1fr}}
+@media(max-width:600px){
+ .life-budget-plan{padding:14px}
+ .life-budget-period .finance-month{width:100%}
+ .life-budget-actions{display:grid;grid-template-columns:1fr 1fr}
+ .life-budget-actions button{font-size:12px;padding:11px 8px}
+ .life-budget-answer{padding:16px}
+ .life-budget-group{padding:12px}
+}
