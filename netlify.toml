@@ -7,7 +7,7 @@
  node_bundler = "esbuild"
 
 [functions."check-reminders"]
- schedule = "*/5 * * * *"
+ schedule = "* * * * *"
 
 [[headers]]
  for = "/sw.js"
