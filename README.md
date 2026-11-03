@@ -41,6 +41,34 @@ Open **All modules → Reference Library**, or use the reference-search shortcut
 
 Read the source, license, privacy, caching, and verification details in [Reference Database](docs/REFERENCE_DATABASE.md).
 
+## Install LifeOS as an app on iPhone or Android
+
+LifeOS is an **installable web app (PWA)**, not a separate App Store or Play Store download. The same Netlify URL works as a normal website; once added to the Home Screen, it opens in its own standalone app window with an icon and a native-feeling tab bar.
+
+- **iPhone:** In Safari, open LifeOS, choose **Share → Add to Home Screen**, and open the newly installed LifeOS icon. The app includes iPhone safe-area spacing for status bars and home indicators.
+- **Android:** In Chrome or another supported browser, open LifeOS, choose **Install app** or **Add to Home screen**, then launch the installed icon.
+- In either case, the main UI caches offline through the service worker. Online data lookups and background push still require service availability.
+
+The installed app uses generated 192px/512px PNG icons, an iOS touch icon and an Android maskable icon. There are no ads or paid UI dependencies.
+
+## Calendar import, export and private subscription links
+
+The **Calendar** is directly accessible from LifeOS's mobile bottom navigation. It supports dated events, repeat schedules, event editing, and importing compatible `.ics` files. Calendar imports are local, and do **not** automatically create push alerts.
+
+To let someone follow your schedule:
+
+1. Open **Calendar → Share your schedule**.
+2. Choose whether the feed should display **Busy only** (the default), event titles, or event titles and locations.
+3. Select **Create a private calendar link**. The app publishes upcoming calendar events to a separate server-side share, without exposing tasks, finances, journals or other LifeOS records.
+4. Tap **Copy link** or **Share link** and send it to the intended subscriber. The link is read-only: subscribers cannot edit LifeOS.
+5. To stop access, tap **Turn off sharing**. The feed is deleted and the link stops responding, although calendar clients may continue showing previously cached copies until they refresh.
+
+For **Apple Calendar on iPhone**, the recipient can open Calendar → Calendars → Add Calendar → Add Subscription Calendar and paste the HTTPS URL. For **Google Calendar**, they can use a desktop browser, open Google Calendar → Other calendars → Add other calendars → From URL, and paste it; the subscribed feed then appears on their devices. The URL is also compatible with other standard iCalendar clients that support HTTP(S) subscriptions.
+
+**Important limitations:** This is one-way calendar sharing, **not** collaborative editing, automatic two-way Google/iCloud synchronization or account-based access control. Anyone with the private link can view the selected event details. The app publishes edits when this device is online and the app next synchronizes; subscribing services control their own refresh intervals. Links that have not been synchronized for approximately one year expire. Keep the private link and local management token secure. The share management token is stored only on the publishing device; clearing that device's browser data may prevent revoking an old link until its inactivity expiry.
+
+For a one-time copy instead, choose **Download .ics**. This downloaded file does not update when events change.
+
 ## Deploy via Netlify
 
 1. Open Netlify > Add new project > Import an existing project > GitHub.
