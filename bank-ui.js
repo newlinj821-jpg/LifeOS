@@ -57,7 +57,7 @@
    '<input class="field" type="text" inputmode="decimal" maxlength="15" id="bankExpectedPay" name="expectedPaycheckAmount" placeholder="e.g. 2500.00" value="'+clean(expected)+'">'+
    '<small>Enter the exact amount you normally receive. Amounts are matched to the cent.</small></div>'+
    '<label><input type="checkbox" name="paycheck" '+(p.paycheck?'checked':'')+'> Notify me when that paycheck is detected</label>'+
-   '<label><input type="checkbox" name="otherDeposits" '+(p.otherDeposits?'checked':'')+'> Other deposits (on by default)</label>'+
+   '<label><input type="checkbox" name="otherDeposits" '+(p.otherDeposits?'checked':'')+'> Notify me about other deposits</label>'+
    '<label><input type="checkbox" name="largeExpense" '+(p.largeExpense?'checked':'')+'> Large purchases (off by default)</label>'+
    '<div class="bank-small-field"><label for="bankSpendingThreshold">Large purchase amount ($)</label><input class="field" type="text" inputmode="decimal" id="bankSpendingThreshold" name="largeExpenseAmount" value="'+clean(p.largeExpenseAmount||300)+'"></div>'+
    '<label><input type="checkbox" name="lowBalance" '+(p.lowBalance?'checked':'')+'> Low checking balance (off by default)</label>'+
