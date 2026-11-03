@@ -27,8 +27,13 @@
     const m=makeMonth(month),end=endOfMonth(m),begin=monthStart(m);
     const repeat=bill.repeat||'none';
     if(!start){
-      // A bill without a scheduled date is listed, but does not enter a month forecast.
-      return [];
+      // Undated monthly bills and savings contributions remain in every monthly plan.
+      // One-off undated expenses belong only to the month they were created.
+      if(repeat==='monthly')return [m+'-01'];
+      if(repeat==='weekly'||repeat==='daily'||repeat==='weekdays')return [];
+      const created=Number(bill.createdAt);
+      const recorded=Number.isFinite(created)&&created>0?new Date(created):new Date();
+      return stamp(recorded).slice(0,7)===m?[stamp(recorded)]:[];
     }
     if(start>end)return [];
     if(repeat==='none')return stamp(start).slice(0,7)===m?[stamp(start)]:[];
