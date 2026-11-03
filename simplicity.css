@@ -108,3 +108,11 @@
 .simple-reminder-text small{font-size:11px;color:var(--muted);margin-top:5px}
 @media(max-width:780px){.simple-plan-layout{grid-template-columns:1fr}}
 @media(max-width:480px){.simple-reminder-status{flex-wrap:wrap}.simple-reminder-status .outline-btn{margin-left:21px}}
+
+/* One-tap automation templates */
+.simple-rule-template{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-top:1px solid var(--line)}
+.simple-rule-template:first-of-type{margin-top:9px}
+.simple-rule-template strong{display:block;color:var(--text);font-size:12px;line-height:1.4}
+.simple-rule-template p{color:var(--muted);font-size:11px;line-height:1.55;margin-top:4px}
+.simple-rule-template .outline-btn{white-space:nowrap;flex:0 0 auto}
+@media(max-width:460px){.simple-rule-template{align-items:flex-start;flex-direction:column;gap:9px}}
