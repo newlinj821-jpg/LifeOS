@@ -37,7 +37,7 @@
     const level=currentMode(),show=logic.visible(level,focus(),db.settings.hidden,allPageKeys());
     const sections=level==='advanced'?
        [['YOUR DAY',show.filter(k=>META[k].group==='CORE')],['EVERYDAY',show.filter(k=>META[k].group==='EVERYDAY')],['BUILD & GROW',show.filter(k=>META[k].group==='BUILD & GROW')],['TOOLS',show.filter(k=>META[k].group==='TOOLS')]]:
-       [['YOUR DAY',show.filter(k=>['today','planner','dayplan','calendar','reminders','capture','insights','explore'].includes(k))],['YOUR AREAS',show.filter(k=>!['today','planner','dayplan','calendar','reminders','capture','insights','explore'].includes(k))]];
+       [['YOUR DAY',show.filter(k=>['today','planner','dayplan','calendar','reminders','capture','insights'].includes(k))],['YOUR AREAS',show.filter(k=>!['today','planner','dayplan','calendar','reminders','capture','insights','explore'].includes(k))],['MORE',show.filter(k=>k==='explore')]];
     return sections.filter(x=>x[1].length).map(([label,keys])=>
       '<div class="nav-group-title">'+label+'</div>'+keys.map(k=>
         '<button class="side-link '+(currentPage===k?'active':'')+'" data-nav="'+k+'"><span class="nav-icon">'+META[k].icon+'</span><span>'+safe(META[k].label)+'</span></button>'
@@ -155,7 +155,7 @@
   function simpleToday(){
     const date=dayKey(new Date()), hour=new Date().getHours(),greet=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
     const dateText=new Intl.DateTimeFormat(undefined,{weekday:'long',month:'long',day:'numeric'}).format(new Date());
-    const due=dueItemsFor(date);
+    const due=dueItemsFor(date).filter(x=>['task','habit','chore','pet','reminder','bill','event','workout'].includes(x.kind)||(x.kind==='meal'&&x.alert&&!doneOn(x,date)));
     const incomplete=due.filter(x=>!doneOn(x,date)).sort((a,b)=>(a.priority==='Urgent'?-1:0)-(b.priority==='Urgent'?-1:0));
     const upcoming=db.items.filter(x=>x.dueAt&&!doneOn(x)&&nextOccurrence(x)).sort((a,b)=>nextOccurrence(a)-nextOccurrence(b));
     const water=db.water[date]||0,waterTarget=db.settings.dailyWater||8,completed=due.filter(x=>doneOn(x,date)).length;
