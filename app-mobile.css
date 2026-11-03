@@ -142,3 +142,39 @@ button:active{transform:scale(.985)}
  .detail-lines{overflow-wrap:anywhere}
 }
 @media(prefers-reduced-motion:reduce){button{transition:none}.topbar,.mobile-bottom{backdrop-filter:none;-webkit-backdrop-filter:none}}
+
+/* iOS standalone status-bar isolation and verified push recovery. */
+.push-recovery-form{margin:15px 0;padding:16px;border:1px solid rgba(178,153,255,.47);border-radius:14px;background:linear-gradient(130deg,rgba(161,127,243,.13),rgba(106,120,208,.06));}
+.push-recovery-form label{display:flex;flex-direction:column;gap:6px;color:var(--text)}
+.push-recovery-form label strong{font-size:13px}
+.push-recovery-form label small{font-size:11px;color:var(--muted);line-height:1.5}
+.push-recovery-entry{display:flex;gap:10px;align-items:stretch;margin:13px 0 9px}
+.push-recovery-entry .field{min-width:0;flex:1;max-width:165px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:.13em;text-align:center;font-size:18px!important}
+.push-recovery-entry button{flex:1;max-width:190px;min-height:45px}
+.push-recovery-form .fine{margin:0}
+@media(max-width:880px){
+  html{scroll-padding-top:calc(80px + env(safe-area-inset-top,0px))}
+  body{overscroll-behavior-y:none}
+  .main-wrap{min-height:100dvh}
+  /* Opaque navigation prevents iOS bouncing/scrolled content from showing beneath the header. */
+  .topbar{
+    z-index:32;isolation:isolate;
+    background:#101521;
+    -webkit-backdrop-filter:none;backdrop-filter:none;
+    box-shadow:0 1px 0 rgba(138,148,176,.12);
+  }
+  body.standalone-ios .topbar{
+    background:#101521;
+    position:sticky;top:0;
+    min-height:calc(64px + env(safe-area-inset-top,0px));
+    padding-top:env(safe-area-inset-top,0px);
+  }
+  :root[data-theme="light"] .topbar,
+  :root[data-theme="light"] body.standalone-ios .topbar{background:#fbfaff}
+  .view{position:relative;isolation:isolate}
+}
+@media(max-width:420px){
+ .push-recovery-entry{gap:8px}
+ .push-recovery-entry .field{max-width:130px;font-size:16px!important}
+ .push-recovery-entry .primary-btn{font-size:12px;padding:10px 12px}
+}
