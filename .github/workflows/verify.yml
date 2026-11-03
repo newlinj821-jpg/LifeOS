@@ -30,6 +30,7 @@ jobs:
           node --check scripts/generate-icons.mjs
           node --check sw.js
           node --check netlify/lib/core.mjs
+          node --check netlify/lib/push-recovery.mjs
           node --check netlify/functions/push.mjs
           node --check netlify/functions/check-reminders.mjs
           node --check calendar-share.js
