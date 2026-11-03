@@ -20,7 +20,7 @@ const META={
  settings:{label:'Settings',icon:'⚙',group:'TOOLS',desc:'Make LifeOS work the way you do.'}
 };
 const KIND={
- task:{label:'Task',section:'planner',icon:'☑',fields:[['category','Category','text','Personal'],['priority','Priority','select',['Normal','High','Urgent']]]},
+ task:{label:'Task',section:'planner',icon:'☑',fields:[['category','Category','text','Personal']]},
  event:{label:'Event',section:'calendar',icon:'▦',fields:[['location','Location','text','Address or online link'],['duration','Duration (minutes)','number','60']]},
  habit:{label:'Routine',section:'routines',icon:'↻',fields:[['category','Area of life','text','Morning, home, self-care'],['target','Daily target','number','1']]},
  workout:{label:'Workout',section:'fitness',icon:'↗',fields:[['duration','Duration (minutes)','number','45'],['category','Workout type','select',['Strength','Cardio','Mobility','Walking','Sports','Other']],['details','Exercises or plan','textarea','Exercises, sets, reps, equipment...']]},
@@ -205,7 +205,7 @@ function openEntry(kind,id){
  optionField('dueAt',kind==='journal'?'Date & time':'Scheduled date & time','datetime-local','',item.dueAt||'')+
  KIND[kind].fields.map(x=>optionField(x[0],x[1],x[2],x[3],item[x[0]])).join('')+
  optionField('notes','Additional context / notes','textarea','Anything you want to remember...',item.notes||'');
- const generic='<div class="form-group"><label for="entry-repeat">Repeat</label><select class="field" id="entry-repeat" name="repeat">'+[['none','Does not repeat'],['daily','Every day'],['weekdays','Weekdays'],['weekly','Every week'],['monthly','Every month']].map(x=>'<option value="'+x[0]+'" '+((item.repeat||'none')===x[0]?'selected':'')+'>'+x[1]+'</option>').join('')+'</select></div>'+
+ const generic=optionField('priority','Priority','select',['Normal','High','Urgent'],item.priority||'Normal')+'<div class="form-group"><label for="entry-repeat">Repeat</label><select class="field" id="entry-repeat" name="repeat">'+[['none','Does not repeat'],['daily','Every day'],['weekdays','Weekdays'],['weekly','Every week'],['monthly','Every month']].map(x=>'<option value="'+x[0]+'" '+((item.repeat||'none')===x[0]?'selected':'')+'>'+x[1]+'</option>').join('')+'</select></div>'+
  '<div class="form-group"><label for="entry-lead">Notify before</label><select class="field" id="entry-lead" name="leadMinutes">'+[[0,'At scheduled time'],[5,'5 minutes before'],[10,'10 minutes before'],[15,'15 minutes before'],[30,'30 minutes before'],[60,'1 hour before'],[1440,'1 day before']].map(x=>'<option value="'+x[0]+'" '+((+item.leadMinutes||0)===x[0]?'selected':'')+'>'+x[1]+'</option>').join('')+'</select></div>'+
  '<div class="form-group full"><label class="toggle-line"><div><strong>Send a detailed reminder</strong><p>Include the item type, schedule and your instructions. Background push needs setup in Settings.</p></div><input type="checkbox" name="alert" class="toggle" '+(item.alert?'checked':'')+'></label></div>';
  const dialog=$('#entryDialog');
