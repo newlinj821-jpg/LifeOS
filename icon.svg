@@ -1,1 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><defs><linearGradient id="g" x2="0" y2="1"><stop stop-color="#b398ff"/><stop offset=".5" stop-color="#8475eb"/><stop offset="1" stop-color="#516ee3"/></linearGradient></defs><rect width="512" height="512" rx="120" fill="#16192e"/><rect x="27" y="27" width="458" height="458" rx="102" fill="url(#g)"/><g fill="none" stroke="#fff" stroke-linecap="round" stroke-width="27"><path d="M256 100v312M100 256h312M146 146l220 220M366 146L146 366"/></g><circle cx="256" cy="256" r="52" fill="#fff"/><circle cx="256" cy="256" r="21" fill="#8475eb"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="t">
+<title id="t">LifeOS app icon</title><defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#272342"/><stop offset="1" stop-color="#10192d"/></linearGradient><radialGradient id="g"><stop stop-color="#5749a5"/><stop offset="1" stop-color="#2b356d"/></radialGradient><filter id="blur"><feGaussianBlur stdDeviation="20"/></filter></defs>
+<rect width="512" height="512" fill="url(#b)"/><circle cx="347" cy="144" r="137" fill="#7256cd" opacity=".16" filter="url(#blur)"/>
+<circle cx="256" cy="256" r="144" stroke="#7564db" stroke-width="9" opacity=".42" fill="none"/>
+<path d="M121 206a144 144 0 0 1 272-3" fill="none" stroke="#a18cff" stroke-width="10" stroke-linecap="round"/>
+<path d="M148 358a144 144 0 0 0 209 0" fill="none" stroke="#75d8ef" stroke-width="10" stroke-linecap="round"/>
+<ellipse cx="256" cy="256" rx="139" ry="87" transform="rotate(-24 256 256)" stroke="#c4b2fa" stroke-width="3" opacity=".23" fill="none"/>
+<circle cx="256" cy="256" r="71" fill="#4d428d" stroke="#8374d8" stroke-width="3"/><circle cx="256" cy="256" r="59" fill="url(#g)"/>
+<path d="M236 226v65h45" fill="none" stroke="#f8f7ff" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/><circle cx="281" cy="291" r="8" fill="#91e7ff"/>
+<circle cx="367" cy="165" r="9" fill="#a1eeff"/><circle cx="133" cy="333" r="9" fill="#bc9aff"/>
+</svg>
