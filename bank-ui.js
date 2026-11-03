@@ -91,7 +91,7 @@
   const p=state.summary?.bankAlerts||{};
   const expected=p.expectedPaycheckAmount??'';
   return '<div class="bank-alert-state"><strong>'+(state.summary?.pushConnected?'Bank alerts are connected':'Bank alerts are off')+'</strong>'+
-   '<p class="fine">First verify normal LifeOS notifications in Settings. When enabled, we send at most two bank notifications a day, avoid 10 PM–8 AM, and never alert for pending deposits or historical backfill.</p>'+
+   '<p class="fine">Choose paycheck, other deposits, large purchases, or low balances below. To receive alerts on this phone, first enable and verify notifications in Settings. Alerts follow posted bank activity, not a random schedule, and may be delayed.</p>'+
    (state.summary?.pushConnected?'<button class="outline-btn" type="button" data-bank="unpair">Turn off bank alerts</button>':
    '<button class="primary-btn" type="button" data-bank="pair">Connect this phone for bank alerts</button>')+'</div>'+
    '<form id="lifeBankAlerts" class="bank-pref-form"><div class="bank-pref-intro"><h3>Your expected paycheck amount</h3>'+
@@ -101,7 +101,7 @@
    '<small>Enter the exact amount you normally receive. Amounts are matched to the cent.</small></div>'+
    '<label><input type="checkbox" name="paycheck" '+(p.paycheck?'checked':'')+'> Notify me when that paycheck is detected</label>'+
    '<label><input type="checkbox" name="otherDeposits" '+(p.otherDeposits?'checked':'')+'> Notify me about other deposits</label>'+
-   '<label><input type="checkbox" name="largeExpense" '+(p.largeExpense?'checked':'')+'> Large purchases (off by default)</label>'+
+   '<label><input type="checkbox" name="largeExpense" '+(p.largeExpense?'checked':'')+'> Notify me of large purchases</label>'+
    '<div class="bank-small-field"><label for="bankSpendingThreshold">Large purchase amount ($)</label><input class="field" type="text" inputmode="decimal" id="bankSpendingThreshold" name="largeExpenseAmount" value="'+clean(p.largeExpenseAmount||300)+'"></div>'+
    '<label><input type="checkbox" name="lowBalance" '+(p.lowBalance?'checked':'')+'> Low checking balance (off by default)</label>'+
    '<div class="bank-small-field"><label for="bankLowThreshold">Low balance amount ($)</label><input class="field" type="text" inputmode="decimal" id="bankLowThreshold" name="lowBalanceAmount" value="'+clean(p.lowBalanceAmount||100)+'"></div>'+
@@ -139,9 +139,9 @@
    '<button class="outline-btn" type="button" data-bank="refresh">Refresh data</button>'+
    '<button class="ghost-btn" type="button" data-bank="lock">Lock</button></div>'+
    balanceCards()+
-   '<div class="bank-tabs">'+[['accounts','Accounts'],['paychecks','Paychecks'],['activity','Activity'],['alerts','Alerts'],['manage','Manage']].map(([k,v])=>
+   '<div class="bank-tabs">'+[['accounts','Balances'],['activity','Transactions'],['alerts','Notifications'],['manage','Connections']].map(([k,v])=>
    '<button type="button" data-bank-tab="'+k+'" class="'+(state.tab===k?'active':'')+'">'+v+'</button>').join('')+'</div>'+
-   (state.tab==='accounts'?accounts()+cashflow():state.tab==='paychecks'?cashflow()+alerts():state.tab==='activity'?activity():state.tab==='alerts'?alerts():institutions())+
+   (state.tab==='accounts'?accounts()+cashflow():state.tab==='activity'?activity():state.tab==='alerts'?alerts():institutions())+
    '<p class="fine bank-footnote">Bank data stays separate from your manual income, bills and savings. Background checks may run with LifeOS closed, but bank availability controls when new transactions can be detected.</p>';
   return '<section class="panel panel-pad bank-panel" id="lifeBankPanel">'+contents+
    (state.message?'<div class="bank-error" role="alert"><p>'+clean(state.message)+'</p>'+
