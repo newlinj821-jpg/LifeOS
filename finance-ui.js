@@ -79,9 +79,9 @@
    (view==='all'||(view==='savings'&&x.savings)||(view==='open'&&x.remaining>0)||(view==='paid'&&x.remaining<=0))&&
    (!query||(x.title+' '+x.category).toLowerCase().includes(query.toLowerCase())));
   const unscheduled=(view==='all'||view==='open')?own.filter(x=>!query||(x.title+' '+x.category).toLowerCase().includes(query.toLowerCase())):[];
-  return '<section class="panel finance-entries"><div class="panel-head"><div><h2>Monthly expenses</h2><p class="fine">'+clean(prettyMonth(month))+' · '+matching.length+' planned entries</p></div><button class="minor" data-finance="add">Add expense ＋</button></div>'+
+  return '<section class="panel finance-entries"><div class="panel-head"><div><h2>Bills, expenses & transfers</h2><p class="fine">'+clean(prettyMonth(month))+' · '+matching.length+' planned entries</p></div><button class="minor" data-finance="add">Add expense ＋</button></div>'+
    '<div class="finance-filter-line"><input id="financeSearch" class="field" type="search" placeholder="Find an expense..." value="'+clean(query)+'" aria-label="Search expenses">'+
-   '<div class="finance-chips">'+[['all','All'],['open','Open'],['paid','Completed'],['savings','Savings']].map(([k,label])=>
+   '<div class="finance-chips">'+[['all','All'],['open','Unpaid'],['paid','Paid'],['savings','Savings transfers']].map(([k,label])=>
    '<button class="chip '+(view===k?'active':'')+'" data-finance-filter="'+k+'">'+label+'</button>').join('')+'</div></div>'+
    (matching.length?'<div class="finance-entry-list">'+matching.map(x=>entryRow(x,month)).join('')+'</div>':
    '<div class="finance-empty"><strong>No expenses here yet</strong><p>Add a bill, an expense, or a regular savings contribution.</p><button class="outline-btn" data-finance="add">＋ Add expense</button></div>')+
@@ -93,7 +93,7 @@
   const stats=F.summary(db.items,db.finance,selectedMonth),noIncome=!db.finance;
   return '<section class="finance-page">'+
    '<div class="finance-head"><div><div class="eyebrow">YOUR PERSONAL SPACE</div><h1>Money</h1><p>Income, everyday expenses, and savings in one place.</p></div>'+
-   '<div class="finance-head-actions"><button class="outline-btn" data-finance="edit">Edit amounts</button><button class="primary-btn" data-finance="add">＋ Add expense</button></div></div>'+
+   '<div class="finance-head-actions"><button class="outline-btn" data-finance="edit">Edit balances</button><button class="primary-btn" data-finance="add">＋ Add bill</button></div></div>'+
    '<div class="finance-month"><span>Showing</span><button aria-label="Previous month" data-finance="prev">‹</button>'+
    '<strong>'+clean(prettyMonth(stats.month))+'</strong><button aria-label="Next month" data-finance="next">›</button>'+
    (stats.month!==currentMonth()?'<button class="finance-month-today" data-finance="today">Current month</button>':'')+'</div>'+
@@ -101,7 +101,12 @@
    ((editing||noIncome)?setupPanel():'')+
    cardTotals(stats)+
    (stats.available<0?'<div class="finance-budget-warning" role="status">Planned expenses and savings exceed the monthly income you entered by '+currency(Math.abs(stats.available))+'.</div>':'')+
-   '<div class="finance-panels">'+forecastPanel(stats)+savingsPanel(stats)+'</div>'+entriesPanel(stats)+'</section>';
+   '<div class="money-shortcuts" aria-label="Money shortcuts">'+
+   '<button type="button" data-finance="add"><strong>＋ Bill or expense</strong><small>Add a payment in a few fields</small></button>'+
+   '<button type="button" data-finance="open-savings"><strong>◇ My savings</strong><small>View balance and savings goal</small></button>'+
+   '<button type="button" data-finance="savings"><strong>↗ Savings transfer</strong><small>Plan money to set aside</small></button>'+
+   '<button type="button" data-finance="open-bills"><strong>▤ Bills & expenses</strong><small>Review scheduled payments</small></button></div>'+
+   '<div class="finance-panels">'+savingsPanel(stats)+forecastPanel(stats)+'</div>'+entriesPanel(stats)+'</section>';
  }
  function editSavingsExpense(){
   openEntry('bill');
@@ -128,7 +133,9 @@
   if(button.hasAttribute('data-finance-filter')){
    view=button.dataset.financeFilter;render();return;
   }
-  if(action==='edit'){editing=!editing;render();return;}
+  if(action==='open-savings'){document.querySelector('#view .finance-savings')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
+  if(action==='open-bills'){document.querySelector('#view .finance-entries')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
+  if(action==='edit'){editing=!editing;render();if(editing)document.querySelector('#view .finance-setup')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
   if(action==='add'){openEntry('bill');return;}
   if(action==='savings'){editSavingsExpense();return;}
   if(action==='prev'){selectedMonth=offsetMonth(selectedMonth,-1);render();return;}
