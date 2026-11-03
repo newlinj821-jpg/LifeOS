@@ -109,7 +109,8 @@ try{
  await command('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:3,mobile:true});
  await command('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:5});
  await command('Page.addScriptToEvaluateOnNewDocument',{source:`
-  (()=>{const original=window.fetch.bind(window);
+  (()=>{try{if(!localStorage.getItem('lifeos.data.v1'))localStorage.setItem('lifeos.data.v1',JSON.stringify({items:[],settings:{onboarded:true,mode:'simple'}}));}catch{}
+   const original=window.fetch.bind(window);
    window.fetch=(input,init)=>{const url=String(typeof input==='string'?input:input?.url||'');
     if(url.includes('/.netlify/functions/plaid')){
      const action=JSON.parse(init?.body||'{}').action;
@@ -122,6 +123,7 @@ try{
  await until("document.querySelector('#financeIncome')!==null",'Money form',15000);
  await insert('#financeIncome','2410.55');
  // Simulate user saving the income rather than merely setting a DOM value.
+ console.log('Before clicking Save:',JSON.stringify(await evaluate("(()=>{const f=document.querySelector('#financeSetupForm');return {income:f?.elements.namedItem('monthlyIncome')?.value,valid:f?.checkValidity(),dialogs:[...document.querySelectorAll('dialog[open]')].map(d=>d.id),focused:document.activeElement?.id}})()")));
  await evaluate("document.querySelector('#financeIncome').blur();document.querySelector('#financeSetupForm button[type=submit]').click()");
  const saved=await evaluate("(()=>{const form=document.querySelector('#financeSetupForm');return {finance:typeof db!=='undefined'?db.finance:null,stored:JSON.parse(localStorage.getItem('lifeos.data.v1')||'{}').finance,valid:form?.checkValidity(),values:form?[...new FormData(form).entries()]:[],toast:document.querySelector('#toast')?.textContent}})()");
  console.log('Income save diagnostics:',JSON.stringify(saved));
