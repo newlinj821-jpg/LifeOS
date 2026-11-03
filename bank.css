@@ -51,3 +51,17 @@
 :root[data-theme="light"] .bank-error{color:#913c49}
 @media(max-width:870px){.bank-income-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.bank-section-head{gap:7px}.bank-income-grid{grid-template-columns:1fr}.bank-actions{display:grid;grid-template-columns:1fr 1fr}.bank-actions button:first-child{grid-column:1/-1}.bank-institution{gap:8px}.bank-institution>span{flex-basis:100%}.bank-account,.bank-transaction{padding:12px 10px}.bank-account>strong,.bank-transaction>strong{font-size:11px}.bank-status{font-size:9px}}
+
+/* Two bank-reported account balances; never confuse them with manual savings. */
+.bank-balance-overview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0 12px}
+.bank-balance-card{min-width:0;padding:17px;border:1px solid rgba(163,142,231,.26);border-radius:15px;
+ background:linear-gradient(140deg,rgba(151,124,234,.13),rgba(26,34,51,.18))}
+.bank-balance-savings{background:linear-gradient(140deg,rgba(102,182,166,.12),rgba(26,34,51,.18))}
+.bank-balance-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:5px}
+.bank-balance-top strong{font-size:13px;letter-spacing:.02em}
+.bank-balance-top span{color:var(--muted);font-size:10px}
+.bank-balance-value{font-size:clamp(22px,4vw,33px);font-weight:800;letter-spacing:-.03em;
+ font-variant-numeric:tabular-nums;margin:15px 0 8px;overflow-wrap:anywhere}
+.bank-balance-account{font-size:11px;color:var(--text);min-height:28px;line-height:1.5;overflow-wrap:anywhere}
+.bank-balance-card small{font-size:10px;line-height:1.5;color:var(--muted);display:block;margin-top:7px}
+@media(max-width:520px){.bank-balance-overview{gap:8px}.bank-balance-card{padding:13px 11px}.bank-balance-top span{display:none}.bank-balance-value{font-size:clamp(20px,5.7vw,29px)}}
