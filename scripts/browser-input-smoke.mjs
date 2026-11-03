@@ -48,7 +48,7 @@ async function until(expression,label,limitMs=10000){
   if(result)return result;
   await wait(120);
  }
- const details=await evaluate("({url:location.href,ready:document.readyState,currentPage:typeof currentPage==='undefined'?'missing':currentPage,view:document.querySelector('#view')?.innerHTML.slice(0,700),hasCore:!!window.LifeOSFinanceCore,scripts:[...document.scripts].filter(x=>x.src).map(x=>x.src.split('/').pop())})").catch(e=>({diagnostic:String(e)}));
+ const details=await evaluate("({url:location.href,ready:document.readyState,currentPage:typeof currentPage==='undefined'?'missing':currentPage,view:document.querySelector('#view')?.innerHTML.slice(0,700),bank:document.querySelector('#lifeBankPanel')?.textContent?.slice(0,500),fetchMock:window.fetch.toString().includes('Mock: not connected'),hasCore:!!window.LifeOSFinanceCore,scripts:[...document.scripts].filter(x=>x.src).map(x=>x.src.split('/').pop())})").catch(e=>({diagnostic:String(e)}));
  console.error('Mobile form diagnostics:',JSON.stringify(details));
  throw Error('Timed out waiting for '+label);
 }
@@ -120,6 +120,7 @@ try{
    };
   })();`});
  await command('Page.navigate',{url:'http://127.0.0.1:'+port+'/#money'});
+ await command('Page.reload',{ignoreCache:true}); // Required even if Chrome opened the same URL before mock injection.
  await until("document.querySelector('#financeIncome')!==null",'Money form',15000);
  await insert('#financeIncome','2410.55');
  // Simulate user saving the income rather than merely setting a DOM value.
