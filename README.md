@@ -12,7 +12,7 @@ Reminders support one-time, daily, weekday, weekly and monthly schedules; advanc
 
 1. Open Netlify > Add new project > Import an existing project > GitHub.
 2. Select newlinj821-jpg/LifeOS, branch main.
-3. Use the repository root as the base directory; netlify.toml supplies the build command, publish folder and function path.
+3. Use the repository root as the base directory; netlify.toml runs npm run build, publishes only the dist folder, and loads server functions from netlify/functions. Leave the base directory at the repository root.
 4. Deploy. The main app works locally in the browser even if notification keys have not been configured.
 5. For push that works with the app closed, in the LifeOS Netlify site add the following environment variables, then redeploy:
 
