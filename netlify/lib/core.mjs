@@ -13,23 +13,21 @@ const dayStr=x=>new Date(x*86400000).toISOString().slice(0,10);
 export function recurrence(r,date){if(date<r.date)return false;const delta=day(date)-day(r.date),wd=new Date(date+'T00:00:00Z').getUTCDay();switch(r.repeat){case 'daily':return true;case 'weekdays':return wd>=1&&wd<=5;case 'weekends':return wd===0||wd===6;case 'weekly':return delta%7===0;case 'monthly':return date.slice(8)===r.date.slice(8);case 'yearly':return date.slice(5)===r.date.slice(5);default:return date===r.date;}}
 export function dueReminders(items,tz,now=new Date(),window=26){const current=clock(now,tz),base=day(current.date),out=[];for(const r of items){if(!r.enabled)continue;const at=+r.time.slice(0,2)*60+(+r.time.slice(3));for(const d of [-1,0,1,2]){const occurrence=dayStr(base+d);if(!recurrence(r,occurrence)||(r.skipDates||[]).includes(occurrence))continue;const elapsed=-d*1440+current.minutes-at+r.lead;if(elapsed>=0&&elapsed<window)out.push({reminder:r,occurrence,key:r.id+':'+occurrence+':'+r.lead,elapsed});}}return out.sort((a,b)=>({high:0,normal:1,low:2}[a.reminder.priority]-{high:0,normal:1,low:2}[b.reminder.priority]));}
 export function quiet(clock,start,end){const m=x=>+x.slice(0,2)*60+(+x.slice(3));const a=m(start),b=m(end);return a===b?false:a<b?clock.minutes>=a&&clock.minutes<b:clock.minutes>=a||clock.minutes<b;}
-export function notification(r,privateMode){
- const labels={task:'Task',workout:'Workout',meal:'Meal',water:'Hydration',medication:'Medication',pet:'Pet care',home:'Home',bill:'Payment',appointment:'Appointment',habit:'Routine',project:'Project',custom:'Reminder'};
+export function notification(r,privateMode=false,occurrence=''){
+ const labels={task:'Task',workout:'Workout',meal:'Meal',water:'Water',medication:'Medication',
+  pet:'Pet care',home:'Household',bill:'Bill',appointment:'Appointment',habit:'Routine',
+  project:'Project',custom:'Reminder'};
  const category=labels[r.kind]||'Reminder';
- const [h,m]=r.time.split(':').map(Number);
- const hour=h%12||12,ampm=h>=12?'PM':'AM',time=hour+':'+String(m).padStart(2,'0')+' '+ampm;
- let timing='Scheduled for '+time;
- if(r.lead===1440)timing='Due tomorrow at '+time;
- else if(r.lead===120)timing='Due in 2 hours at '+time;
- else if(r.lead===60)timing='Due in 1 hour at '+time;
- else if(r.lead>0)timing='Due in '+r.lead+' minutes at '+time;
- const details=String(r.details||'').replace(/\s+/g,' ').trim();
- return {
-  title:privateMode?'LifeOS · '+category:r.lead?'Upcoming '+category.toLowerCase()+': '+r.title:'LifeOS · '+category+': '+r.title,
-  body:privateMode?'Your '+category.toLowerCase()+' reminder is due. Open LifeOS for details.':(timing+' · '+category+(details?' · '+details:' · Open LifeOS to review, complete or reschedule.')).slice(0,290),
-  url:'/#reminders',
-  tag:'lifeos-'+r.id,
-  priority:r.priority
- };
+ const [h,m]=String(r.time||'09:00').split(':').map(Number);
+ const time=(h%12||12)+':'+String(m).padStart(2,'0')+(h>=12?' PM':' AM');
+ const titleText=String(r.title||category).replace(/\s+/g,' ').trim().slice(0,74);
+ const details=String(r.details||'').replace(/\s+/g,' ').trim().slice(0,75);
+ const when=r.lead===1440?'Tomorrow · '+time:r.lead>0?'In '+r.lead+' min · '+time:'Scheduled · '+time;
+ const body=privateMode?'A '+category.toLowerCase()+' needs your attention. Open LifeOS to review.':
+  (when+' · '+category+(details?' · '+details:''));
+ return {title:privateMode?'LifeOS reminder':r.lead?'Coming up · '+titleText:'Reminder · '+titleText,
+  body:body.slice(0,150),url:'/#reminders',
+  tag:'lifeos-'+String(r.id).slice(0,85)+'-'+String(occurrence||r.date||'').slice(0,10),
+  priority:r.priority==='high'?'high':'normal'};
 }
 export const trimSeen=s=>Object.fromEntries(Object.entries(s||{}).filter(([,v])=>Date.now()-Number(v)<93*86400000).slice(-500));
