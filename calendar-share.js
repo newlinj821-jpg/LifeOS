@@ -15,12 +15,14 @@ function collect(){
  const until=new Date(today);until.setMonth(until.getMonth()+18);
  const out=[];
  for(const item of source()){
-  const start=new Date(item.dueAt);if(!Number.isFinite(+start))continue;
+  const allDay=item.allDay===true&&/^\d{4}-\d{2}-\d{2}/.test(item.dueAt);
+  const day=allDay?item.dueAt.slice(0,10):'';
+  const start=new Date(allDay?day+'T00:00:00':item.dueAt);if(!Number.isFinite(+start))continue;
   const frequency=String(item.repeat||'none');
   const add=d=>{
    if(d<begin||d>until||out.length>=750)return;
    out.push({uid:('item_'+item.id+(frequency==='none'?'':'_'+d.getFullYear()+'_'+(d.getMonth()+1)+'_'+d.getDate())).replace(/[^A-Za-z0-9:_-]/g,'').slice(0,130),
-    start:utc(d),end:utc(dateEnd(d,item.duration)),title:String(item.title).slice(0,140),location:String(item.location||'').slice(0,140)});
+    start:utc(d),end:utc(allDay?new Date(d.getTime()+86400000):dateEnd(d,item.duration)),allDay,day:allDay?d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'):'',title:String(item.title).slice(0,140),location:String(item.location||'').slice(0,140)});
   };
   if(frequency==='none'){add(start);continue;}
   let date=new Date(start),count=0;
@@ -149,21 +151,18 @@ async function shareNow(){
   try{await navigator.share({title:'Subscribe to my LifeOS calendar',text:'View my read-only LifeOS calendar:',url:link()});}catch(e){if(e.name!=='AbortError'){notice='Share failed. Use Copy link instead.';redraw();}}
  }else await copy();
 }
-function snapshotICS(){
- const events=collect(),lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//LifeOS//Calendar Export//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:LifeOS Events'];
- const text=x=>String(x||'').replace(/\\/g,'\\\\').replace(/\r\n|\r|\n/g,'\\n').replace(/;/g,'\\;').replace(/,/g,'\\,');
- const stamp=x=>new Date(x).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
- for(const event of events){
-  lines.push('BEGIN:VEVENT','UID:'+event.uid+'@lifeos.local','DTSTAMP:'+stamp(new Date()),'DTSTART:'+stamp(event.start),
-   'DTEND:'+stamp(event.end),'SUMMARY:'+text(event.title));
-  if(event.location)lines.push('LOCATION:'+text(event.location));
-  lines.push('END:VEVENT');
- }
- lines.push('END:VCALENDAR');
- const blob=new Blob([lines.join('\r\n')+'\r\n'],{type:'text/calendar;charset=utf-8'});
- const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='lifeos-calendar.ics';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
- notice='Downloaded a calendar snapshot. A downloaded file does not stay connected or update automatically.';redraw();
+async function snapshotICS(){
+ try{
+  const {localCalendarEntries,makeICS}=await import('/calendar-core.mjs');
+  const entries=localCalendarEntries(db.items,{details:true});
+  const blob=new Blob([makeICS(entries,{name:'My LifeOS Calendar'})],{type:'text/calendar;charset=utf-8'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='lifeos-calendar.ics';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  notice='Downloaded a calendar snapshot. For automatic updates, share the private subscription link instead.';
+ }catch(e){notice='Unable to export calendar: '+String(e.message||e);}
+ redraw();
 }
+
 let originalSave=save;
 save=function(){originalSave();if(share){clearTimeout(syncTimer);syncTimer=setTimeout(()=>sync(true),1800);}};
 document.addEventListener('click',async e=>{
