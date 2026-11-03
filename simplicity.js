@@ -6,7 +6,7 @@
   const TITLES={
     fitness:'Fitness',food:'Food & water',money:'Finances',home:'Home & chores',
     pets:'Pets',wellness:'Wellness',routines:'Routines',projects:'Projects',
-    goals:'Goals',vault:'Notes',journal:'Journal'
+    goals:'Goals',vault:'Notes',journal:'Journal',library:'Reference Library'
   };
   const ICONS={task:'☑',reminder:'♧',meal:'◌',workout:'↗',pet:'♧',bill:'＄',chore:'⌑',note:'◇',event:'▦',habit:'↻'};
   const titlePlaceholders={
