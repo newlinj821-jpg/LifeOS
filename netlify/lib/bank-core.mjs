@@ -19,8 +19,8 @@ export const bankReady=()=>Boolean(
   /^[a-fA-F0-9]{64}$/.test(process.env.LIFEOS_BANK_VAULT_KEY||'')
 );
 export const blankVault=()=>({version:1,items:[],prefs:{
- deposits:false,largePurchases:false,largeAmount:250,lowBalance:false,lowThreshold:100,
- showDetails:false
+ vaDeposits:true,deposits:false,largePurchases:false,largeAmount:250,lowBalance:false,lowThreshold:100,
+ showAmounts:false,showDetails:false
 },pushKey:null,updatedAt:0});
 function vaultKey(){
  const hex=process.env.LIFEOS_BANK_VAULT_KEY;
@@ -45,7 +45,7 @@ export async function readVault(store=bankStore()){
 export async function writeVault(value,store=bankStore()){
  await store.setJSON('owner-vault',encryptVault({...value,updatedAt:Date.now()}));
 }
-const safe=s=>String(s??'').replace(/[<>\\x00-\\x1f]/g,' ').trim();
+const safe=s=>String(s??'').replace(/[<>\x00-\x1f]/g,' ').trim();
 export function normalizeAccount(x){
  if(!x||!x.account_id)return null;
  const balance=x.balances||{};
@@ -57,10 +57,10 @@ export function normalizeAccount(x){
  currency:String(balance.iso_currency_code||'USD').slice(0,3)};
 }
 export function normalizeTransaction(x){
- if(!x?.transaction_id||!x.account_id||!/^\\d{4}-\\d{2}-\\d{2}$/.test(x.date||''))return null;
+ if(!x?.transaction_id||!x.account_id||!/^\d{4}-\d{2}-\d{2}$/.test(x.date||'')||!Number.isFinite(Number(x.amount)))return null;
  return {id:String(x.transaction_id).slice(0,180),accountId:String(x.account_id).slice(0,180),
  date:x.date,name:safe(x.merchant_name||x.name||'Bank transaction').slice(0,130),
- amount:Number(x.amount)||0,pending:x.pending===true,
+ amount:Number(x.amount),pending:x.pending===true,
  category:safe(x.personal_finance_category?.primary||x.category?.[0]||'OTHER').slice(0,55),
  detail:safe(x.personal_finance_category?.detailed||'').slice(0,65),
  currency:String(x.iso_currency_code||'USD').slice(0,3)};
@@ -147,23 +147,39 @@ export async function refreshVault(vault,{transactions=true,liveBalance=false}={
  }
  return {vault,newTransactions:news,warnings};
 }
-export function financeAlerts(oldVault,newVault,newTransactions){
- const prefs=newVault.prefs||blankVault().prefs,alerts=[];
+export const vaDeposit=t=>Boolean(t&&t.amount<0&&/(\bVA\s*(?:BENEF(?:ITS?)?|COMP(?:ENSATION)?|DISAB(?:ILITY)?)\b|\bVACP\b|\bVETERANS?\s+AFFAIRS\b|\bXXVA\s+BENEF\b|\bUS\s+TREAS(?:URY)?\s*310.{0,35}\bVA\b)/i.test(t.name||''));
+const dollars=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Math.abs(Number(n)||0));
+export function financeAlerts(oldVault,newVault,newTransactions,now=Date.now()){
+ const prefs={...blankVault().prefs,...(newVault.prefs||{})},alerts=[];
+ const amountEnabled=prefs.showAmounts===true;
+ // The initial Plaid backfill is never treated as a newly-arriving paycheck.
  for(const t of newTransactions){
-  if(prefs.deposits&&t.amount<0&&!isTransfer(t))
-   alerts.push({id:'dep:'+t.id,kind:'deposit',amount:Math.abs(t.amount),title:'Deposit detected',body:'A new deposit was reported by your bank.'});
-  if(prefs.largePurchases&&t.amount>0&&!isTransfer(t)&&t.amount>=(Number(prefs.largeAmount)||250))
-   alerts.push({id:'spend:'+t.id,kind:'spending',amount:t.amount,title:'Large transaction detected',body:'A transaction reached your alert threshold.'});
+  if(t.pending||!Number.isFinite(t.amount)||isTransfer(t))continue;
+  // Avoid notifying on old historical transactions during a later catch-up sync.
+  const day=Date.parse(t.date+'T12:00:00Z');
+  if(!Number.isFinite(day)||now-day>3*86400000||day-now>86400000)continue;
+  const source=(t.institution||'Bank').slice(0,55);
+  const isVA=vaDeposit(t);
+  if(t.amount<0&&(isVA?prefs.vaDeposits:prefs.deposits)){
+   const title=isVA?'VA benefits deposited':'Bank deposit received';
+   const body=(amountEnabled?dollars(t.amount)+' received':'New deposit received')+' · '+source+(isVA?' · VA benefits':'')+'.';
+   alerts.push({id:'bank:deposit:'+t.id,kind:isVA?'va-deposit':'deposit',title,body,createdAt:now});
+  }
+  if(prefs.largePurchases&&t.amount>0&&t.amount>=Math.max(1,Number(prefs.largeAmount)||250)){
+   const body=(amountEnabled?dollars(t.amount)+' at '+t.name:'A purchase reached your spending threshold')+' · '+source+'.';
+   alerts.push({id:'bank:spend:'+t.id,kind:'spending',title:'Large purchase recorded',body,createdAt:now});
+  }
  }
  if(prefs.lowBalance){
   const oldAccounts=new Map((oldVault.items||[]).flatMap(i=>i.accounts||[]).map(a=>[a.id,a]));
   for(const account of (newVault.items||[]).flatMap(i=>i.accounts||[])){
    if(account.type!=='depository'||account.subtype!=='checking'||account.current===null)continue;
-   const previous=oldAccounts.get(account.id)?.current;
-   const limit=Number(prefs.lowThreshold)||100;
-   if(account.current<limit&&(previous===undefined||previous===null||previous>=limit))
-    alerts.push({id:'low:'+account.id+':'+Math.floor(Date.now()/86400000),kind:'balance',
-      amount:account.current,title:'Checking balance below threshold',body:'A bank-reported checking balance crossed your alert threshold.'});
+   const previous=oldAccounts.get(account.id)?.current,threshold=Math.max(0,Number(prefs.lowThreshold)||100);
+   if(account.current<threshold&&(previous===undefined||previous===null||previous>=threshold))
+    alerts.push({id:'bank:low:'+account.id+':'+Math.floor(now/86400000),kind:'low-balance',
+     title:'Checking balance is low',
+     body:amountEnabled?'Bank-reported balance: '+dollars(account.current)+'.':'Checking fell below your selected threshold.',
+     createdAt:now});
   }
  }
  return alerts.slice(0,20);
