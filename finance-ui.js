@@ -107,12 +107,13 @@
   openEntry('bill');
   const title=$('#entry-title'),amount=$('#entry-amount'),cat=$('#entry-category'),repeat=$('#entry-repeat'),due=$('#entry-dueAt'),alert=$('#entryForm [name="alert"]');
   if(title)title.value='Savings transfer';
-  if(amount)amount.value='900';
+  if(amount){amount.value='';amount.placeholder='Enter any amount';amount.required=true;}
   if(cat)cat.value='Savings';
   if(repeat)repeat.value='monthly';
   if(due)due.value=localDateTime(new Date());
   if(alert)alert.checked=false;
-  toast('Savings is set to $900 monthly. Change the amount or date before saving.');
+  toast('Choose how much to put into savings and when it should repeat.');
+  if(amount)amount.focus();
  }
  const priorRender=render;
  render=function(){
