@@ -1,0 +1,39 @@
+/* Calendar linking: native-feeling share and subscription surfaces */
+.calendar-share-panel{margin:0 0 17px;border:1px solid rgba(165,141,246,.26);background:radial-gradient(circle at 100% 0%,rgba(146,118,237,.10),transparent 47%),var(--panel)}
+.calendar-share-header{display:flex;align-items:center;gap:12px;margin-bottom:11px}
+.calendar-share-header h2{font-size:19px;letter-spacing:-.4px;margin:4px 0 0}
+.calendar-share-header-icon{width:43px;height:43px;border-radius:13px;background:#39314e;color:#c5b2fb;display:grid;place-items:center;font-size:23px;flex:none}
+.calendar-share-ready{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:7px 0 15px;font-size:12px}
+.calendar-share-ready strong{font-size:13px;color:var(--text)}
+.calendar-share-ready small{width:100%;padding-left:17px;color:var(--muted);line-height:1.45}
+.calendar-share-dot{height:8px;width:8px;border-radius:50%;background:var(--good)}
+.calendar-share-privacy{margin:12px 0;border-block:1px solid var(--line);padding:4px 0}
+.calendar-share-privacy .toggle-line{padding:11px 0}
+.calendar-share-privacy .toggle-line p{font-size:11px;margin-top:3px}
+.calendar-link-group{display:flex;gap:8px;margin:10px 0 14px;min-width:0}
+.calendar-link-group .field{flex:1;min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis}
+.calendar-link-group .primary-btn{min-width:102px;white-space:nowrap}
+.calendar-share-actions{display:flex;flex-wrap:wrap;gap:9px;margin:14px 0 10px}
+.calendar-share-actions button{min-height:41px}
+.calendar-share-hint{border-left:2px solid rgba(172,145,248,.38);padding-left:10px;margin:4px 0 13px}
+.calendar-share-help{margin-top:13px;border-top:1px solid var(--line);padding-top:11px}
+.calendar-share-help summary{color:var(--accent);cursor:pointer;font-size:12px;font-weight:730;min-height:30px;display:flex;align-items:center;list-style:none}
+.calendar-share-help summary::-webkit-details-marker{display:none}
+.calendar-share-help summary::before{content:'▸';margin-right:9px;transition:transform .15s}
+.calendar-share-help[open] summary::before{transform:rotate(90deg)}
+.calendar-share-instructions{display:flex;flex-direction:column;gap:7px;padding:10px 0 5px}
+.calendar-share-instructions strong{font-size:12px;color:var(--text)}
+.calendar-share-instructions p{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:8px}
+.calendar-share-message{margin-top:10px;padding:10px 13px;border-radius:10px;font-size:11px;line-height:1.5;background:rgba(157,130,241,.1);border:1px solid rgba(157,130,241,.3);color:var(--text)}
+:root[data-theme="light"] .calendar-share-header-icon{background:#f1ebfd;color:#6e52ba}
+:root[data-theme="light"] .calendar-share-panel{background:radial-gradient(circle at 100% 0%,#e9e1ff,transparent 50%),#fff}
+@media(max-width:680px){
+ .calendar-share-panel{padding:18px 15px;border-radius:17px}
+ .calendar-share-header h2{font-size:17px}
+ .calendar-link-group{flex-direction:column}
+ .calendar-link-group .field{width:100%;font-size:14px!important;min-height:43px}
+ .calendar-link-group .primary-btn{min-height:43px}
+ .calendar-share-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+ .calendar-share-actions button{font-size:12px;min-height:44px}
+ .calendar-share-actions button:last-child:nth-child(3){grid-column:1/-1}
+}
