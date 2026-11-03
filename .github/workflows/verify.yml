@@ -14,6 +14,8 @@ jobs:
       - name: Validate JavaScript syntax
         run: |
           node --check app.js
+          node --check finance-core.js
+          node --check finance-ui.js
           node --check enhancements.js
           node --check mode-core.js
           node --check simplicity.js
@@ -44,6 +46,9 @@ jobs:
           npm run build
           test -f dist/index.html
           test -f dist/app.js
+          test -f dist/finance-core.js
+          test -f dist/finance-ui.js
+          test -f dist/finance.css
           test -f dist/enhancements.js
           test -f dist/mode-core.js
           test -f dist/simplicity.js
