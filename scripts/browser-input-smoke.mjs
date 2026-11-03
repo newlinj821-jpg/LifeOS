@@ -73,8 +73,9 @@ try{
  const binary=chromePath();
  sessionDir=mkdtempSync(join(tmpdir(),'lifeos-smoke-'));
  chrome=spawn(binary,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--no-first-run',
+  '--disable-extensions','--disable-component-extensions-with-background-pages',
   '--disable-background-networking','--remote-debugging-port=9222','--user-data-dir='+sessionDir,
-  '--window-size=430,930','about:blank'],{stdio:'ignore'});
+  '--window-size=430,930','http://127.0.0.1:'+port+'/#money'],{stdio:'ignore'});
  let pages,tab;
  for(let i=0;i<90;i++){
   try{
@@ -83,6 +84,12 @@ try{
    if(tab)break;
   }catch{}
   await wait(100);
+ }
+ if(!tab?.webSocketDebuggerUrl){
+  try{
+   const newTab=await fetch('http://127.0.0.1:9222/json/new?about:blank',{method:'PUT'});
+   if(newTab.ok)tab=await newTab.json();
+  }catch{}
  }
  if(!tab?.webSocketDebuggerUrl)throw Error('Chromium page debugging endpoint unavailable');
  ws=new WebSocket(tab.webSocketDebuggerUrl);
