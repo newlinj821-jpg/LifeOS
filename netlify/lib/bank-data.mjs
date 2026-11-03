@@ -76,3 +76,61 @@ export function purchasePreview(cost,savings,monthlyAvailable){
   savingsShortfall:fromSavings===null?null:Math.max(0,-fromSavings),
   budgetShortfall:fromBudget===null?null:Math.max(0,-fromBudget)};
 }
+
+
+/* Paycheck classification deliberately excludes transfers and pending credits.
+   A statement descriptor such as VACP TREAS 310 or XXVA BENEF remains private. */
+export const incomeDescriptor=t=>String(t?.title||t?.name||'').toUpperCase().replace(/[^A-Z0-9]+/g,' ').trim();
+export const isVAIncome=t=>isDeposit(t)&&(
+ /\bVACP\s+TREAS\s*310\b/.test(incomeDescriptor(t))||
+ /\bXXVA\s+BENEF\b/.test(incomeDescriptor(t))||
+ /\bVA\s+(?:BENEFITS?|COMPENSATION)\b/.test(incomeDescriptor(t))
+);
+export const defaultBankPrefs=()=>({enabled:false,paycheck:true,otherDeposits:false,largeExpense:false,
+ largeExpenseAmount:300,lowBalance:false,lowBalanceAmount:100,showAmounts:false,
+ paycheckMatches:[],quietStart:'22:00',quietEnd:'08:00',maxDaily:2});
+export function bankPrefs(value){
+ const x=value&&typeof value==='object'?value:{},defaults=defaultBankPrefs();
+ const money=(v,d)=>Number.isFinite(+v)&&+v>=1&&+v<=100000?roundMoney(+v):d;
+ const time=(v,d)=>typeof v==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(v)?v:d;
+ return {...defaults,enabled:x.enabled===true,paycheck:x.paycheck!==false,
+  otherDeposits:x.otherDeposits===true,largeExpense:x.largeExpense===true,
+  largeExpenseAmount:money(x.largeExpenseAmount,300),lowBalance:x.lowBalance===true,
+  lowBalanceAmount:money(x.lowBalanceAmount,100),showAmounts:x.showAmounts===true,
+  maxDaily:Math.max(1,Math.min(3,Math.trunc(+x.maxDaily||2))),
+  quietStart:time(x.quietStart,'22:00'),quietEnd:time(x.quietEnd,'08:00'),
+  paycheckMatches:Array.isArray(x.paycheckMatches)?x.paycheckMatches.filter(v=>typeof v==='string'&&v.trim().length>=3&&v.length<=45).map(v=>v.trim().toUpperCase()).slice(0,8):[]};
+}
+export function isPaycheck(t,config={}){
+ if(!isDeposit(t))return false;
+ if(isVAIncome(t))return true;
+ const p=bankPrefs(config),label=incomeDescriptor(t);
+ if(p.paycheckMatches.some(v=>label.includes(v)))return true;
+ return /^INCOME_WAGES\b/.test(t.category||'')||/\bPAYROLL\b/.test(label);
+}
+export function paycheckHistory(transactions,config={}){
+ const matches=(Array.isArray(transactions)?transactions:[]).filter(t=>isPaycheck(t,config)&&/^\d{4}-\d{2}-\d{2}$/.test(t.date||'')).sort((a,b)=>b.date.localeCompare(a.date));
+ const gaps=[];
+ for(let i=0;i+1<Math.min(matches.length,7);i++){
+  const gap=Math.round((Date.parse(matches[i].date+'T12:00Z')-Date.parse(matches[i+1].date+'T12:00Z'))/86400000);
+  if(gap>0)gaps.push(gap);
+ }
+ const avg=gaps.length?gaps.reduce((a,b)=>a+b,0)/gaps.length:0;
+ const cadence=avg>=26&&avg<=36?'Monthly':avg>=12&&avg<=16?'Every two weeks':avg>=6&&avg<=8?'Weekly':'Unknown';
+ const next=matches[0]&&cadence!=='Unknown'?new Date(Date.parse(matches[0].date+'T12:00Z')+Math.round(avg)*86400000).toISOString().slice(0,10):null;
+ return {count:matches.length,latest:matches[0]?{date:matches[0].date,amount:Math.abs(matches[0].amount),label:incomeDescriptor(matches[0]),accountId:matches[0].accountId}:null,
+  cadence,nextEstimated:next,estimateOnly:Boolean(next)};
+}
+export function bankAlertCandidates(transactions,config={},now=Date.now()){
+ const p=bankPrefs(config),alerts=[],minDate=new Date(now-5*86400000).toISOString().slice(0,10);
+ for(const t of (Array.isArray(transactions)?transactions:[])){
+  if(!t||t.pending||!t.date||t.date<minDate||!t.id)continue;
+  const paycheck=isPaycheck(t,p);
+  const kind=paycheck&&p.paycheck?'paycheck':
+   isDeposit(t)&&p.otherDeposits?'deposit':
+   isExpense(t)&&p.largeExpense&&t.amount>=p.largeExpenseAmount?'spending':null;
+  if(!kind)continue;
+  alerts.push({id:kind+':'+t.id,kind,date:t.date,amount:Math.abs(t.amount),accountId:t.accountId});
+ }
+ return alerts;
+}
