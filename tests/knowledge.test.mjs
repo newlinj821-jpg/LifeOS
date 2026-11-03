@@ -21,6 +21,8 @@ test('USDA search records retain fdcId and nutrient units and never invent missi
  ]});
  assert.equal(food.key,'usda:123456');assert.equal(food.metrics.calories,71);
  assert.equal(food.metrics.protein,2.5);assert.equal(food.metrics.sodium,null);
+ const incomplete=normalizeFood({fdcId:456,description:'Incomplete reference',foodNutrients:[{nutrientId:1008,value:null}]});
+ assert.equal(incomplete.metrics.calories,null,'missing nutrition cannot be reported as zero');
  assert.match(food.unit,/100 g/i);assert.match(food.sourceUrl,/123456/);
 });
 test('Wger exercise catalog selects English translations and reduces markup to plain text',()=>{
