@@ -42,6 +42,17 @@ test('Pending credits, savings transfers, dated old history and refunds cannot t
  assert.equal(isTransfer(tx[1]),true);
  assert.equal(isDeposit(tx[0]),false);
 });
+test('Configured amount alone identifies a paycheck; a same-value refund is not pay',()=>{
+ const generic=make('generic',-2150.75,'INCOMING ACH CREDIT','2026-11-03',{category:'INCOME_OTHER_INCOME'});
+ assert.equal(isPaycheck(generic,prefs),true);
+ const refund=make('refund-identical',-2150.75,'REFUND FROM STORE','2026-11-03',{category:'OTHER'});
+ assert.equal(isPaycheck(refund,prefs),false);
+ const higher=make('higher-income',-2150.76,'XXVA BENEF','2026-11-03');
+ const alerts=bankAlertCandidates([generic,refund,higher],{...prefs,otherDeposits:true},Date.parse('2026-11-04T12:00:00Z'));
+ assert.equal(alerts.find(a=>a.id==='paycheck:generic')?.kind,'paycheck');
+ assert.equal(alerts.find(a=>a.id==='deposit:higher-income')?.kind,'deposit');
+ assert.ok(!alerts.some(a=>a.kind==='paycheck'&&a.id.includes('refund')));
+});
 test('Payroll from another employer is recognized only at the expected amount',()=>{
  const payroll=make('wages',-1000,'Employer Payroll','2026-11-03',{category:'INCOME_WAGES'});
  assert.equal(isPaycheck(payroll,{...prefs,expectedPaycheckAmount:1000}),true);
