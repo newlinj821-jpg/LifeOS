@@ -40,7 +40,17 @@
    if(currentPage==='settings')render();
   }
   if(event.target.closest('[data-life-reload]')){
-   try{const reg=await navigator.serviceWorker?.getRegistration();await reg?.update();}catch(e){}
+   try{
+    const reg=await navigator.serviceWorker?.getRegistration();
+    if(reg){
+     const changed=new Promise(resolve=>{
+      const timeout=setTimeout(resolve,5000);
+      navigator.serviceWorker.addEventListener('controllerchange',()=>{clearTimeout(timeout);resolve();},{once:true});
+     });
+     await reg.update();
+     if(reg.installing||reg.waiting)await changed;
+    }
+   }catch(e){console.warn('LifeOS update check could not finish',e);}
    location.reload();
   }
  });
