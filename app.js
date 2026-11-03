@@ -227,11 +227,11 @@ function action(name){
  if(name==='prev-month'||name==='next-month'||name==='today-month'){if(name==='today-month')calendarCursor=new Date();else calendarCursor=new Date(calendarCursor.getFullYear(),calendarCursor.getMonth()+(name==='next-month'?1:-1),1);render();return;}
  if(name==='focus'){const end=new Date(Date.now()+25*60000);openEntry('reminder');setTimeout(()=>{const due=$('#entry-dueAt'),title=$('#entry-title'),details=$('#entry-details');if(due&&title){due.value=localDateTime(end);title.value='Focus session finished';if(details)details.value='You have completed 25 minutes of focused work. Take a short break and choose what comes next.';}},50);return;}
  if(name==='go-notifications'){setPage('settings');requestAnimationFrame(()=>$('#notificationSettings')?.scrollIntoView({behavior:'smooth'}));return;}
- if(name==='save-settings'){db.settings.name=$('#settingName').value.trim().slice(0,45);db.settings.theme=$('#settingTheme').value;db.settings.budget=Math.max(0,+$('#settingBudget').value||0);db.settings.dailyWater=Math.min(30,Math.max(1,+$('#settingWater').value||8));db.settings.privatePush=!!$('#privatePush')?.checked;db.settings.quietEnabled=!!$('#quietEnabled')?.checked;db.settings.quietStart=$('#quietStart')?.value||'22:00';db.settings.quietEnd=$('#quietEnd')?.value||'07:00';save();syncAllReminders(true);toast('Preferences saved.');return;}
+ if(name==='save-settings'){db.settings.name=$('#settingName').value.trim().slice(0,45);db.settings.theme=$('#settingTheme').value;db.settings.budget=Math.max(0,+$('#settingBudget').value||0);db.settings.dailyWater=Math.min(30,Math.max(1,+$('#settingWater').value||8));save();toast('Preferences saved.');return;} if(name==='save-notification-settings'){db.settings.quietStart=$('#quietStart').value||'22:00';db.settings.quietEnd=$('#quietEnd').value||'07:00';save();syncAllReminders(true);toast('Notification preferences saved.');return;}
  if(name==='export-data'){const blob=new Blob([JSON.stringify({...db,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='LifeOS-backup-'+dayKey(new Date())+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);toast('Backup exported. Store it somewhere private.');return;}
  if(name==='clear-data'){if(!confirm('Erase all local LifeOS records on this device? Export a backup first. This cannot be undone.'))return;db=defaults();save();toast('Local records cleared.');return;}
  if(name==='enable-push'){if(pushEnabled)syncAllReminders();else enablePush();return;}
- if(name==='repair-push'){enablePush(true);return;}
+ if(name==='repair-push'){repairPush();return;}
  if(name==='disable-push'){disablePush();return;}
  if(name==='test-notification'){sendTestNotification();return;}
  if(name==='sync-all'){syncAllReminders();return;}
@@ -280,7 +280,7 @@ function pushItems(){
   return {id:it.id,title:it.title,details:[notificationContext(it).join(' · '),it.details||it.notes||''].filter(Boolean).join(' · ').slice(0,180),date:dayKey(when),time:localDateTime(when).slice(11),repeat:it.repeat||'none',kind,lead:Number(it.leadMinutes)||0,priority:it.priority==='Urgent'?'high':it.priority==='High'?'high':'normal',enabled:true};
  }).filter(it=>it.date&&it.time);
 }
-async function loadConfig(){
+async async function loadConfig(){
  try{const r=await fetch('/.netlify/functions/push',{cache:'no-store'});if(r.ok)config=await r.json();}catch(e){}
  render();
 }
