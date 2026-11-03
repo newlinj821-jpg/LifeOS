@@ -8,12 +8,13 @@ const makeId=()=>randomBytes(24).toString('base64url');
 const makeToken=()=>randomBytes(32).toString('hex');
 const now=()=>Date.now();
 const error=(code,message,status)=>json({code,error:message},status);
-const MAX_AGE=365*86400000;
+const MAX_IDLE_AGE=365*86400000;
 const validatePayload=(body)=>{
  const events=cleanCalendarEvents(body.events);
  if(!Array.isArray(body.events)||body.events.length>900)throw Error('Too many calendar events. Maximum 900 per update.');
  if(JSON.stringify(events).length>190000)throw Error('Calendar data too large.');
- return {events,shareNames:body.shareNames===true,shareLocations:body.shareLocations===true,updatedAt:now()};
+ const shareNames=body.shareNames===true,shareLocations=shareNames&&body.shareLocations===true;
+ return {events:calendarPreview(events,{shareNames,shareLocations}),shareNames,shareLocations,updatedAt:now()};
 };
 const sameOrigin=(request)=>{
  const origin=request.headers.get('origin'),host=new URL(request.url).origin;
@@ -34,11 +35,11 @@ const feedResponse=(calendar,id)=>{
 export default async function handler(request){
  const url=new URL(request.url);
  if(request.method==='GET'){
-  const id=url.searchParams.get('id')||'';
+  const id=String(url.searchParams.get('id')||'').replace(/\\.ics$/i,'');
   if(!ID_PATTERN.test(id))return error('INVALID_LINK','Invalid calendar link.',404);
   try{
    const current=await store().get('share-'+id,{type:'json'});
-   if(!current||current.revoked||now()-(current.createdAt||0)>MAX_AGE)return error('LINK_EXPIRED','Calendar link is no longer active.',404);
+   if(!current||current.revoked||now()-(current.updatedAt||current.createdAt||0)>MAX_IDLE_AGE)return error('LINK_EXPIRED','Calendar link is no longer active.',404);
    return feedResponse(current,id);
   }catch(e){console.error('Calendar feed unavailable',String(e?.message||e).slice(0,170));return error('STORE_UNAVAILABLE','Calendar feed is temporarily unavailable.',503);}
  }
