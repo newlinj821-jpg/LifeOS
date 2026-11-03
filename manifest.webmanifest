@@ -1,0 +1,16 @@
+{
+  "name": "LifeOS — Your personal operating system",
+  "short_name": "LifeOS",
+  "description": "Organize everything with LifeOS",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#101321",
+  "theme_color": "#101321",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

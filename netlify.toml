@@ -1,0 +1,15 @@
+[build]
+ command = "npm install --no-audit --no-fund"
+ publish = "."
+ functions = "netlify/functions"
+
+[functions]
+ node_bundler = "esbuild"
+
+[functions."check-reminders"]
+ schedule = "*/5 * * * *"
+
+[[headers]]
+ for = "/sw.js"
+ [headers.values]
+ Cache-Control = "no-cache, must-revalidate"
