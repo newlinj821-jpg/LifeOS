@@ -14,7 +14,7 @@ let seen=trimSeen(r.seen),changed=false;
 for(const occurrence of due){
 if(seen[occurrence.key])continue;
 if(r.quiet?.enabled&&quiet(clock(now,r.timezone),r.quiet.start,r.quiet.end)&&occurrence.reminder.priority!=='high'){muted++;continue;}
-try{await webpush.sendNotification(r.subscription,JSON.stringify(notification(occurrence.reminder,r.privateMode)),{TTL:1800,urgency:occurrence.reminder.priority==='high'?'high':'normal'});
+try{await webpush.sendNotification(r.subscription,JSON.stringify(notification(occurrence.reminder,r.privateMode,occurrence.occurrence)),{TTL:1800,urgency:occurrence.reminder.priority==='high'?'high':'normal'});
 seen[occurrence.key]=Date.now();changed=true;sent++;
 }catch(e){failed++;const code=e?.statusCode||0;console.error('LifeOS scheduled push failed',code,String(e?.message||'').slice(0,200));if([404,410].includes(code)){await store.delete(item.key);return;}}
 }
