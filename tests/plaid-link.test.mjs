@@ -60,7 +60,7 @@ test('Unknown INVALID_FIELD remains actionable without passing arbitrary server 
  assert.ok(details.message.includes('Logs'));
  assert.ok(!details.message.includes('private-token-123'));
 });
-test('Exact LifeOS redirect URI is in setup instructions and user-facing fallback',()=>{
+test('Exact LifeOS redirect URI is in setup instructions and user-facing fallback',async()=>{
  const doc=(await import('node:fs')).readFileSync(new URL('../docs/PLAID_SETUP.md',import.meta.url),'utf8');
  assert.ok(doc.includes('PLAID_REDIRECT_URI'));
  const bank=(await import('node:fs')).readFileSync(new URL('../bank-ui.js',import.meta.url),'utf8');
