@@ -20,6 +20,8 @@ if(b.action==='recover-start'){
  const limits=recoveryCanStart(prev.recovery);
  if(!limits.ok)return json({code:limits.code,error:limits.error},429);
  const verification=newRecovery(b.subscription.endpoint,Date.now(),prev.recovery);
+ // Persist the challenge before sending push: an open iPhone can auto-verify immediately.
+ await store.setJSON(key,{...prev,recovery:verification.record});
  try{
   webpush.setVapidDetails(process.env.VAPID_SUBJECT,process.env.VAPID_PUBLIC_KEY,process.env.VAPID_PRIVATE_KEY);
   await webpush.sendNotification(b.subscription,JSON.stringify({
@@ -31,10 +33,10 @@ if(b.action==='recover-start'){
  }catch(e){
   const st=e?.statusCode||0;console.error('LifeOS push recovery delivery',st,String(e?.message||'').slice(0,180));
   if([404,410].includes(st)){await store.delete(key);return json({code:'PUSH_EXPIRED',error:'The previous subscription is expired. Try enabling notifications again.'},410);}
+  await store.setJSON(key,prev); // Remove undelivered challenge; leave existing registration intact.
   if([401,403].includes(st))return json({code:'VAPID_REJECTED',error:'The push provider rejected the notification keys. Check the VAPID settings in Netlify.'},502);
   return json({code:'VERIFY_DELIVERY_FAILED',error:'Could not send a verification code to this phone. Try again or check the function logs.'},502);
  }
- await store.setJSON(key,{...prev,recovery:verification.record});
  return json({ok:true,verificationRequired:true,expiresInSeconds:600,acceptedByProvider:true});
 }
 if(b.action==='recover-finish'){
