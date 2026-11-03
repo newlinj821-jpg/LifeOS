@@ -2,8 +2,18 @@
 (function(root){
   'use strict';
   const round=(n)=>Math.round((Number(n)+Number.EPSILON)*100)/100;
-  const validAmount=(v)=>typeof v!=='boolean'&&v!==''&&v!==null&&v!==undefined&&Number.isFinite(Number(v))&&Number(v)>=0&&Number(v)<=100000000;
-  const amount=(v)=>validAmount(v)?round(Number(v)):0;
+  // Support plain numbers and familiar currency input like "$2,450.75".
+  // Never accept negative amounts, arithmetic, or exponent notation.
+  const parseMoneyInput=v=>{
+    if(typeof v==='number')return Number.isFinite(v)&&v>=0&&v<=100000000?v:null;
+    if(typeof v!=='string')return null;
+    const text=v.trim().replace(/^\\$/,'').replace(/,/g,'').trim();
+    if(!/^(?:\\d+)(?:\\.\\d{0,2})?$/.test(text))return null;
+    const value=Number(text);
+    return Number.isFinite(value)&&value>=0&&value<=100000000?value:null;
+  };
+  const validAmount=v=>parseMoneyInput(v)!==null;
+  const amount=v=>validAmount(v)?round(parseMoneyInput(v)):0;
   const validMonth=(v)=>typeof v==='string'&&/^\d{4}-(0[1-9]|1[0-2])$/.test(v);
   const localParts=s=>{const m=String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})/);if(!m)return null;const y=+m[1],mo=+m[2],d=+m[3];if(y<1900||y>2100||mo<1||mo>12||d<1||d>31)return null;const date=new Date(y,mo-1,d,12);return date.getFullYear()===y&&date.getMonth()===mo-1&&date.getDate()===d?date:null};
   const stamp=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -78,5 +88,5 @@
       savingsProgress:p.savingsGoal?Math.min(100,Math.round(p.savingsBalance/p.savingsGoal*100)):0,
       rows:rows.sort((a,b)=>a.first.localeCompare(b.first))};
   }
-  root.LifeOSFinanceCore=Object.freeze({amount,validAmount,validMonth,profile,summary,datesForBill,isSavings});
+  root.LifeOSFinanceCore=Object.freeze({amount,validAmount,parseMoneyInput,validMonth,profile,summary,datesForBill,isSavings});
 })(typeof window!=='undefined'?window:globalThis);
