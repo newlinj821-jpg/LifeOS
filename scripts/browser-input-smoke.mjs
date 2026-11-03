@@ -114,7 +114,18 @@ try{
    window.fetch=(input,init)=>{const url=String(typeof input==='string'?input:input?.url||'');
     if(url.includes('/.netlify/functions/plaid')){
      const action=JSON.parse(init?.body||'{}').action;
-     return Promise.resolve(new Response(JSON.stringify(action==='config'?{configured:true,environment:'sandbox'}:{error:'Mock: not connected'}),{status:action==='config'?200:401,headers:{'content-type':'application/json'}}));
+     const full={environment:'sandbox',updatedAt:Date.now(),connected:1,institutions:[{id:'mock-item',name:'Test Credit Union'}],
+       accounts:[{id:'test-checking',itemId:'mock-item',name:'Everyday Checking',institution:'Test Credit Union',mask:'1234',type:'depository',subtype:'checking',current:1820.55,available:1770.55,lastReportedAt:Date.now()},
+       {id:'test-savings',itemId:'mock-item',name:'Rainy Day Savings',institution:'Test Credit Union',mask:'5678',type:'depository',subtype:'savings',current:4100.07,available:null,lastReportedAt:Date.now()}],
+       paychecks:{},thisMonth:{deposits:0},transactions:[],bankAlerts:{},pushConnected:false};
+     const partial={...full,accounts:[{...full.accounts[0],current:null,available:null}]};
+     const body=action==='config'?{configured:true,environment:'sandbox'}:
+       action==='unlock'?{ok:true,session:'a'.repeat(64),summary:full}:
+       action==='status'?{ok:true,summary:full}:
+       action==='refresh'?{ok:true,summary:partial,warnings:[{institution:'Test Credit Union',code:'PRODUCT_NOT_READY'}]}:
+       {error:'Mock bank action not supported'};
+     const okay=['config','unlock','status','refresh'].includes(action);
+     return Promise.resolve(new Response(JSON.stringify(body),{status:okay?200:401,headers:{'content-type':'application/json'}}));
     }
     return original(input,init);
    };
@@ -131,7 +142,19 @@ try{
  await until("(()=>{try{return JSON.parse(localStorage.getItem('lifeos.data.v1')||'{}').finance?.monthlyIncome===2410.55}catch{return false}})()", 'Income save',4000);
  console.log('PASS: income saved to the actual LifeOS database');
  await insert('#lifeBankKey','validPrivateBankUnlockKey123');
- await evaluate("document.querySelector('#lifeBankKey').blur();setPage('settings')");
+ await evaluate("document.querySelector('#lifeBankKey').blur();document.querySelector('#lifeBankUnlock button[type=submit]').click()");
+ await until("document.querySelector('.bank-balance-checking')&&document.querySelector('.bank-balance-savings')",'two bank cards');
+ const checked=await evaluate("(()=>({checking:document.querySelector('.bank-balance-checking')?.textContent,savings:document.querySelector('.bank-balance-savings')?.textContent}))()");
+ if(!checked.checking.includes('$1,820.55')||!checked.savings.includes('$4,100.07'))
+  throw Error('Checking or savings balance missing: '+JSON.stringify(checked));
+ console.log('PASS: Checking and Savings display separate Plaid balances');
+ await evaluate("document.querySelector('[data-bank=refresh]').click()");
+ await until("document.querySelector('.bank-balance-savings')?.textContent.includes('Previously reported')",'retained balances on partial refresh',8000);
+ const refresh=await evaluate("(()=>({checking:document.querySelector('.bank-balance-checking')?.textContent,savings:document.querySelector('.bank-balance-savings')?.textContent}))()");
+ if(!refresh.checking.includes('$1,820.55')||!refresh.savings.includes('$4,100.07'))
+  throw Error('Partial Plaid refresh removed a balance: '+JSON.stringify(refresh));
+ console.log('PASS: a failed/partial bank refresh keeps both last-reported balances');
+ await evaluate("setPage('settings')");
  await until("document.querySelector('#settingName')!==null",'Settings name');
  await insert('#settingName','Keyboard works');
  await evaluate("document.querySelector('#settingName').blur();openEntry('note')");
