@@ -5,11 +5,12 @@ import {updateBanks,deliverBankAlerts} from '../lib/bank-background.mjs';
 import {randomBytes} from 'node:crypto';
 import {currentEnvironment,isConfigured,verifySetupKey,newSession,storeSession,sessionValid,deleteSession,readVault,writeVault} from '../lib/bank-security.mjs';
 import {normalizeAccount,normalizeTransaction,applyTransactions,bankPrefs,paycheckHistory,summarizeTransactions} from '../lib/bank-data.mjs';
+import {plaidLinkOptions,describePlaidError} from '../lib/plaid-link.mjs';
 
 const base=()=>currentEnvironment()==='production'?'https://production.plaid.com':'https://sandbox.plaid.com';
-const sourceOfError=e=>({code:e?.code||'BANK_ERROR',error:e?.message||'Bank data is temporarily unavailable.'});
+const sourceOfError=e=>({code:e?.code||'BANK_ERROR',error:e?.message||'Bank data is temporarily unavailable.',...(e?.field?{field:e.field}:{}),...(e?.requestId?{requestId:e.requestId}:{}),...(e?.canTryWebOnly?{canTryWebOnly:true}:{})});
 class PlaidError extends Error {
- constructor(code,message,status=502){super(message);this.code=code;this.status=status;}
+ constructor(code,message,status=502,info={}){super(message);this.code=code;this.status=status;this.field=info.field||null;this.requestId=info.requestId||null;this.canTryWebOnly=info.canTryWebOnly===true;}
 }
 async function callPlaid(route,body){
  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),27000);
@@ -27,7 +28,9 @@ async function callPlaid(route,body){
     INVALID_ACCESS_TOKEN:'This bank connection needs to be relinked.',
     TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION:'Transaction history changed during synchronization.'
    };
-   throw new PlaidError(code,safeMessages[code]||'Plaid returned '+code+'. Check the Plaid dashboard or try later.');
+   const details=describePlaidError(data,route);
+   throw new PlaidError(details.code||code,details.message||safeMessages[code]||'Plaid returned '+code+'. Check the Plaid dashboard or try later.',
+    response.status>=400&&response.status<500?response.status:502,details);
   }
   return data;
  }catch(e){
@@ -112,16 +115,14 @@ export default async function handler(request){
   if(action==='link-token'){
    const item=body.updateItemId?vault.items.find(x=>x.itemId===body.updateItemId):null;
    if(body.updateItemId&&!item)return json({code:'NOT_FOUND',error:'Select an existing bank to reconnect.'},404);
-   const opts=item?{access_token:item.accessToken,user:{client_user_id:vault.ownerId},client_name:'LifeOS',
-     country_codes:['US'],language:'en'}:{user:{client_user_id:vault.ownerId},client_name:'LifeOS',products:['transactions'],
-     country_codes:['US'],language:'en'};
-   const webhook=process.env.PLAID_WEBHOOK_URL;
-   if(!item&&webhook&&/^https:\/\/[^?#]+$/.test(webhook))opts.webhook=webhook;
-   const redirect=process.env.PLAID_REDIRECT_URI;
-   if(redirect&&/^https:\/\/[^?#]+$/.test(redirect))opts.redirect_uri=redirect;
+   const webWithoutRedirect=body.webWithoutRedirect===true;
+   const opts=plaidLinkOptions(vault,item,{
+    webhook:process.env.PLAID_WEBHOOK_URL,redirect:process.env.PLAID_REDIRECT_URI
+   },webWithoutRedirect);
    const data=await callPlaid('link/token/create',opts);
    if(typeof data.link_token!=='string')throw new PlaidError('NO_LINK_TOKEN','Plaid did not provide a link token.');
-   return success({ok:true,linkToken:data.link_token,expiration:data.expiration});
+   return success({ok:true,linkToken:data.link_token,expiration:data.expiration,
+    webOnly:webWithoutRedirect});
   }
   if(action==='exchange'){
    if(typeof body.publicToken!=='string'||body.publicToken.length>512||!body.publicToken.startsWith('public-'))
@@ -192,7 +193,7 @@ export default async function handler(request){
   }
   return json({code:'UNKNOWN_ACTION',error:'Unknown bank action.'},400);
  }catch(e){
-  console.error('LifeOS bank operation failed:',String(e.code||e.name||'SERVER_ERROR').slice(0,75));
+  console.error('LifeOS bank operation failed:',String(e.code||e.name||'SERVER_ERROR').slice(0,75),String(e.requestId||'').slice(0,80));
   return json(sourceOfError(e),e?.status||503);
  }
 }
