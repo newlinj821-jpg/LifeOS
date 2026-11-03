@@ -83,7 +83,12 @@
    '<div class="finance-filter-line"><input id="financeSearch" class="field" type="search" placeholder="Find an expense..." value="'+clean(query)+'" aria-label="Search expenses">'+
    '<div class="finance-chips">'+[['all','All'],['open','Unpaid'],['paid','Paid'],['savings','Savings transfers']].map(([k,label])=>
    '<button class="chip '+(view===k?'active':'')+'" data-finance-filter="'+k+'">'+label+'</button>').join('')+'</div></div>'+
-   (matching.length?'<div class="finance-entry-list">'+matching.map(x=>entryRow(x,month)).join('')+'</div>':
+   (matching.length?'<div class="finance-entry-list">'+(view==='all'?[
+    ['Bills',matching.filter(x=>!x.savings&&['Housing','Utilities','Subscriptions','Health','Transport'].includes(x.category))],
+    ['Expenses',matching.filter(x=>!x.savings&&!['Housing','Utilities','Subscriptions','Health','Transport'].includes(x.category))],
+    ['Savings transfers',matching.filter(x=>x.savings)]
+   ].filter(([,group])=>group.length).map(([label,group])=>'<div class="finance-entry-group"><h3>'+label+'</h3>'+group.map(x=>entryRow(x,month)).join('')+'</div>').join(''):
+   matching.map(x=>entryRow(x,month)).join(''))+'</div>':
    '<div class="finance-empty"><strong>No expenses here yet</strong><p>Add a bill, an expense, or a regular savings contribution.</p><button class="outline-btn" data-finance="add">＋ Add expense</button></div>')+
    (unscheduled.length?'<div class="finance-unscheduled"><strong>Not scheduled</strong><p class="fine">Set a date to include these in monthly projections.</p>'+
     unscheduled.map(x=>'<button data-edit="'+clean(x.id)+'">'+clean(x.title)+' · '+currency(F.amount(x.amount))+' ›</button>').join('')+'</div>':'')+
