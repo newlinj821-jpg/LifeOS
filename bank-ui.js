@@ -2,7 +2,7 @@
 (() => {
  'use strict';
  if(typeof render!=='function'||typeof db==='undefined')return;
- const state={config:null,summary:null,session:sessionStorage.getItem('lifeos.bankSession')||'',busy:false,loading:false,ready:false,message:'',error:false,tab:'accounts',showAll:false};
+ const state={config:null,summary:null,session:sessionStorage.getItem('lifeos.bankSession')||'',busy:false,loading:false,ready:false,message:'',error:false,linkWebFallback:false,requestId:'',tab:'accounts',showAll:false};
  const money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(n)||0);
  const clean=x=>safe(String(x??''));
  const when=x=>x?new Date(x).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Not yet';
@@ -12,7 +12,7 @@
    body:JSON.stringify({action,...data})});
   const response=await result.json().catch(()=>({error:'Bank service response was unreadable'}));
   if(!result.ok){
-   const error=new Error(response.error||'Bank service is unavailable');error.code=response.code;
+   const error=new Error(response.error||'Bank service is unavailable');error.code=response.code;error.canTryWebOnly=response.canTryWebOnly===true;error.requestId=response.requestId||'';
    if(result.status===401){state.session='';state.summary=null;sessionStorage.removeItem('lifeos.bankSession');}
    throw error;
   }
@@ -96,7 +96,11 @@
    (state.tab==='accounts'?accounts()+cashflow():state.tab==='paychecks'?cashflow()+alerts():state.tab==='activity'?activity():state.tab==='alerts'?alerts():institutions())+
    '<p class="fine bank-footnote">Bank data stays separate from your manual income, bills and savings. Background checks may run with LifeOS closed, but bank availability controls when new transactions can be detected.</p>';
   return '<section class="panel panel-pad bank-panel" id="lifeBankPanel">'+contents+
-   (state.message?'<p class="bank-error" role="status">'+clean(state.message)+'</p>':'')+
+   (state.message?'<div class="bank-error" role="alert"><p>'+clean(state.message)+'</p>'+
+     (state.requestId?'<small>Plaid request ID: '+clean(state.requestId)+'</small>':'')+
+     (state.linkWebFallback?'<button class="outline-btn" type="button" data-bank="connect-web" style="margin-top:12px">Try web-only bank connection</button>'+
+      '<small>Browser-only mode skips the OAuth redirect. Some banks may still require the Plaid redirect to be registered.</small>':'')+
+     '</div>':'')+
    (state.busy?'<p class="fine" role="status">Working with Plaid…</p>':'')+'</section>';
  }
  function redraw(){
@@ -188,16 +192,22 @@
   });
   return linkLoading;
  }
- async function link(updateItemId=''){
+ async function link(updateItemId='',webWithoutRedirect=false){
   if(state.busy)return;
-  state.busy=true;redraw();
+  state.busy=true;state.message='';state.linkWebFallback=false;state.requestId='';redraw();
   try{
    await loadLink();
-   const data=await api('link-token',updateItemId?{updateItemId}:{});
+   const data=await api('link-token',{
+    ...(updateItemId?{updateItemId}:{}),...(webWithoutRedirect?{webWithoutRedirect:true}:{})
+   });
    rememberOAuth(data.linkToken,updateItemId);
    const handler=createHandler(data.linkToken,updateItemId);
    handler.open();
-  }catch(e){state.message=e.message||'Could not open Plaid.';}
+   if(data.webOnly)state.message='Using browser-only connection. Some OAuth banks may still require a registered redirect URI.';
+  }catch(e){
+   state.message=e.message||'Could not open Plaid.';
+   state.linkWebFallback=e.canTryWebOnly===true;state.requestId=e.requestId||'';
+  }
   finally{state.busy=false;redraw();}
  }
  async function pair(){
@@ -248,6 +258,7 @@
   if(removal){if(confirm('Disconnect this bank? Manual LifeOS bills, income and savings will remain.'))await run('disconnect',{itemId:removal.dataset.bankDisconnect});return;}
   const el=e.target.closest('[data-bank]');if(!el)return;
   if(el.dataset.bank==='connect')await link();
+  else if(el.dataset.bank==='connect-web')await link('',true);
   else if(el.dataset.bank==='refresh')await run('refresh');
   else if(el.dataset.bank==='pair')await pair();
   else if(el.dataset.bank==='unpair')await run('unlink-notifications');
